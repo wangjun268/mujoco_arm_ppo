@@ -1,0 +1,117 @@
+<mujocoinclude>
+  <body name="hand_base" pos="0 0 0">
+    <inertial pos="-0.0116260966942382 -0.00274813279998326 0.0887556064299578" mass="0.119355521222427" fullinertia="0.000281608895823112 0.00019328567036429 0.000103627416878272 8.38474241472843E-07 -1.21134466138976E-05 4.38631241419914E-07"/>
+    <geom name="hand_base_link_g" type="mesh" mesh="l20_base_link" rgba="0.52 0.53 0.56 1" friction="1.5 0.3 0.1" contype="2" conaffinity="4"/>
+    <site name="grasp_center" pos="0.05 -0.005701943077 0.135"/>
+    <body name="hand_pinky_metacarpals" pos="-0.028576 -0.038102 0.15031">
+      <joint name="pinky_mcp_roll" type="hinge" pos="0 0 0" axis="1 0 0" limited="true" range="-0.17 0.17" damping="0.1" armature="0.05"/>
+      <inertial pos="0.0111783787153197 1.73988259632996E-08 0.00220160108534925" mass="0.000876738307234833" fullinertia="3.50684268310259E-08 2.68810255289946E-08 4.23561712818563E-08 -2.01255880662754E-13 5.24776532940736E-09 -3.6732684106161E-14"/>
+      <geom name="hand_pinky_metacarpals_g" type="mesh" mesh="l20_pinky_metacarpals" rgba="0.13 0.13 0.14 1" friction="1.5 0.3 0.1" contype="2" conaffinity="4"/>
+      <body name="hand_pinky_proximal" pos="0.016675 0 0">
+        <joint name="pinky_mcp_pitch" type="hinge" pos="0 0 0" axis="0 1 0" limited="true" range="0.0 1.4" damping="0.1" armature="0.05"/>
+        <inertial pos="-0.00112908280804496 -3.86673394475734E-06 0.0228400655439676" mass="0.00451758867960127" fullinertia="6.70005738245491E-07 6.78910860635017E-07 1.37487233622769E-07 1.07100998730671E-11 -2.60697889693044E-08 1.619384302116E-10"/>
+        <geom name="hand_pinky_proximal_g" type="mesh" mesh="l20_pinky_proximal" rgba="0.52 0.53 0.56 1" friction="1.5 0.3 0.1" contype="2" conaffinity="4"/>
+        <body name="hand_pinky_middle" pos="-0.00419455244191127 1.32099958100595E-05 0.0448194355633776">
+          <joint name="pinky_pip" type="hinge" pos="0 0 0" axis="0 1 0" limited="true" range="0.0 1.57" damping="0.1" armature="0.05"/>
+          <inertial pos="-0.000210918582412463 -2.91656475989721E-06 0.0168376013644396" mass="0.00240742140800545" fullinertia="2.37171034123177E-07 1.83342187871652E-07 9.8226350069222E-08 -2.70991764305561E-12 -1.39296056921613E-08 3.74983864753835E-12"/>
+          <geom name="hand_pinky_middle_g" type="mesh" mesh="l20_pinky_middle" rgba="0.52 0.53 0.56 1" friction="1.5 0.3 0.1" contype="2" conaffinity="4"/>
+          <body name="hand_pinky_distal" pos="0.0027556 0 0.031702">
+            <joint name="pinky_dip" type="hinge" pos="0 0 0" axis="0 1 0" limited="true" range="0.0 1.4" damping="0.1" armature="0.05"/>
+            <inertial pos="-0.00807040294887727 -1.95860163051398E-05 0.00803087332396402" mass="0.00337412669848792" fullinertia="1.62067265373363E-07 1.79090083193527E-07 1.32918139665313E-07 -1.03084161797139E-10 -5.96264453601984E-08 1.05530293251026E-10"/>
+            <geom name="hand_pinky_distal_g" type="mesh" mesh="l20_pinky_distal" rgba="0.52 0.53 0.56 1" friction="1.5 0.3 0.1" contype="2" conaffinity="4"/>
+            <site name="hand_pinky_distal_tip" pos="-0.007815002929 -1.274375245e-05 0.02306353301"/>
+          </body>
+        </body>
+      </body>
+    </body>
+    <body name="hand_ring_metacarpals" pos="-0.032199 -0.016502 0.15931">
+      <joint name="ring_mcp_roll" type="hinge" pos="0 0 0" axis="1 0 0" limited="true" range="-0.17 0.17" damping="0.1" armature="0.05"/>
+      <inertial pos="0.0111783787153197 -5.36905619352712E-07 0.0022016396219149" mass="0.000876738307234883" fullinertia="3.5068426831027E-08 2.68810255289954E-08 4.23561712818567E-08 -2.01255880718238E-13 5.24776532940712E-09 -3.67326835665223E-14"/>
+      <geom name="hand_ring_metacarpals_g" type="mesh" mesh="l20_ring_metacarpals" rgba="0.13 0.13 0.14 1" friction="1.5 0.3 0.1" contype="2" conaffinity="4"/>
+      <body name="hand_ring_proximal" pos="0.016675 1.2656E-05 0">
+        <joint name="ring_mcp_pitch" type="hinge" pos="0 0 0" axis="0 1 0" limited="true" range="0.0 1.4" damping="0.1" armature="0.05"/>
+        <inertial pos="-0.00112908262583935 -1.70769630077061E-05 0.0228400659770985" mass="0.00451758885102983" fullinertia="6.70005760179099E-07 6.78910876105749E-07 1.37487241358748E-07 1.07124239123891E-11 -2.60697922383748E-08 1.61928071276549E-10"/>
+        <geom name="hand_ring_proximal_g" type="mesh" mesh="l20_ring_proximal" rgba="0.52 0.53 0.56 1" friction="1.5 0.3 0.1" contype="2" conaffinity="4"/>
+        <body name="hand_ring_middle" pos="-0.00419455244174995 0 0.0448194355645609">
+          <joint name="ring_pip" type="hinge" pos="0 0 0" axis="0 1 0" limited="true" range="0.0 1.57" damping="0.1" armature="0.05"/>
+          <inertial pos="-0.00021091859446306 -2.91657898018882E-06 0.0168376013345287" mass="0.00240742140052362" fullinertia="2.37171033138143E-07 1.83342186859774E-07 9.82263498201999E-08 -2.7100414951465E-12 -1.39296060459522E-08 3.74956284923257E-12"/>
+          <geom name="hand_ring_middle_g" type="mesh" mesh="l20_ring_middle" rgba="0.52 0.53 0.56 1" friction="1.5 0.3 0.1" contype="2" conaffinity="4"/>
+          <body name="hand_ring_distal" pos="0.00275561956405355 0 0.0317024252327154">
+            <joint name="ring_dip" type="hinge" pos="0 0 0" axis="0 1 0" limited="true" range="0.0 1.4" damping="0.1" armature="0.05"/>
+            <inertial pos="-0.00807040294866931 -1.9586017669021E-05 0.00803087256062983" mass="0.0033741266986076" fullinertia="1.6206726538022E-07 1.79090083161836E-07 1.32918139683415E-07 -1.03084186529573E-10 -5.96264453639804E-08 1.05530278574068E-10"/>
+            <geom name="hand_ring_distal_g" type="mesh" mesh="l20_ring_distal" rgba="0.52 0.53 0.56 1" friction="1.5 0.3 0.1" contype="2" conaffinity="4"/>
+            <site name="hand_ring_distal_tip" pos="-0.007815001998 -1.274375245e-05 0.02306352928"/>
+          </body>
+        </body>
+      </body>
+    </body>
+    <body name="hand_middle_metacarpals" pos="-0.0345042006792679 0.00509811417717426 0.163804307612682">
+      <joint name="middle_mcp_roll" type="hinge" pos="0 0 0" axis="1 0 0" limited="true" range="-0.17 0.17" damping="0.1" armature="0.05"/>
+      <inertial pos="0.0111783787153198 -5.36905619463734E-07 0.00220163962191467" mass="0.000876738307234834" fullinertia="3.50684268310259E-08 2.68810255289945E-08 4.23561712818563E-08 -2.0125588061605E-13 5.24776532940725E-09 -3.67326839308491E-14"/>
+      <geom name="hand_middle_metacarpals_g" type="mesh" mesh="l20_middle_metacarpals" rgba="0.13 0.13 0.14 1" friction="1.5 0.3 0.1" contype="2" conaffinity="4"/>
+      <body name="hand_middle_proximal" pos="0.0166748095398548 1.26556862705962E-05 0">
+        <joint name="middle_mcp_pitch" type="hinge" pos="0 0 0" axis="0 1 0" limited="true" range="0.0 1.4" damping="0.1" armature="0.05"/>
+        <inertial pos="-0.00112908264667504 -1.70765644096349E-05 0.0228400658126111" mass="0.00451758879836063" fullinertia="6.70005750213689E-07 6.7891086764891E-07 1.37487237816443E-07 1.0709683946819E-11 -2.60697892463952E-08 1.61944386240367E-10"/>
+        <geom name="hand_middle_proximal_g" type="mesh" mesh="l20_middle_proximal" rgba="0.52 0.53 0.56 1" friction="1.5 0.3 0.1" contype="2" conaffinity="4"/>
+        <body name="hand_middle_middle" pos="-0.00419455244189623 0 0.0448194355665477">
+          <joint name="middle_pip" type="hinge" pos="0 0 0" axis="0 1 0" limited="true" range="0.0 1.57" damping="0.1" armature="0.05"/>
+          <inertial pos="-0.000210918582531389 -2.91656481549163E-06 0.0168376013611927" mass="0.00240742140799016" fullinertia="2.3717103371746E-07 1.83342187462169E-07 9.82263500660551E-08 -2.70991790215455E-12 -1.39296056849284E-08 3.74983812024697E-12"/>
+          <geom name="hand_middle_middle_g" type="mesh" mesh="l20_middle_middle" rgba="0.52 0.53 0.56 1" friction="1.5 0.3 0.1" contype="2" conaffinity="4"/>
+          <body name="hand_middle_distal" pos="0.00275561956368908 0 0.031702425228504">
+            <joint name="middle_dip" type="hinge" pos="0 0 0" axis="0 1 0" limited="true" range="0.0 1.4" damping="0.1" armature="0.05"/>
+            <inertial pos="-0.00807040294827011 -1.95860161913697E-05 0.00803087332606282" mass="0.00337412669879527" fullinertia="1.62067265406276E-07 1.79090083197241E-07 1.32918139683668E-07 -1.03084160292156E-10 -5.96264453651413E-08 1.05530287328658E-10"/>
+            <geom name="hand_middle_distal_g" type="mesh" mesh="l20_middle_distal" rgba="0.52 0.53 0.56 1" friction="1.5 0.3 0.1" contype="2" conaffinity="4"/>
+            <site name="hand_middle_distal_tip" pos="-0.007815001998 -1.274375245e-05 0.02306353115"/>
+          </body>
+        </body>
+      </body>
+    </body>
+    <body name="hand_index_metacarpals" pos="-0.0297703583048348 0.026698113515616 0.159311418025823">
+      <joint name="index_mcp_roll" type="hinge" pos="0 0 0" axis="1 0 0" limited="true" range="-0.17 0.17" damping="0.1" armature="0.05"/>
+      <inertial pos="0.0111783787153197 -5.36905619408223E-07 0.0022016396219149" mass="0.000876738307234888" fullinertia="3.50684268310272E-08 2.68810255289955E-08 4.23561712818569E-08 -2.01255880639633E-13 5.24776532940715E-09 -3.67326838815665E-14"/>
+      <geom name="hand_index_metacarpals_g" type="mesh" mesh="l20_index_metacarpals" rgba="0.13 0.13 0.14 1" friction="1.5 0.3 0.1" contype="2" conaffinity="4"/>
+      <body name="hand_index_proximal" pos="0.0166748095646496 0 0">
+        <joint name="index_mcp_pitch" type="hinge" pos="0 0 0" axis="0 1 0" limited="true" range="0.0 1.4" damping="0.1" armature="0.05"/>
+        <inertial pos="-0.00112908264491655 -3.86657489762077E-06 0.0228400658147424" mass="0.00451758879934099" fullinertia="6.70005750303174E-07 6.78910867706126E-07 1.37487237848926E-07 1.07096827382529E-11 -2.60697892451836E-08 1.61944343361799E-10"/>
+        <geom name="hand_index_proximal_g" type="mesh" mesh="l20_index_proximal" rgba="0.52 0.53 0.56 1" friction="1.5 0.3 0.1" contype="2" conaffinity="4"/>
+        <body name="hand_index_middle" pos="-0.00419455239160021 1.32099983796707E-05 0.0448194355727413">
+          <joint name="index_pip" type="hinge" pos="0 0 0" axis="0 1 0" limited="true" range="0.0 1.57" damping="0.1" armature="0.05"/>
+          <inertial pos="-0.000210918632589208 -2.91655816400671E-06 0.0168376013550637" mass="0.00240742140798158" fullinertia="2.37171033813523E-07 1.83342187562481E-07 9.82263500700157E-08 -2.70992594914544E-12 -1.3929605674102E-08 3.74988422279869E-12"/>
+          <geom name="hand_index_middle_g" type="mesh" mesh="l20_index_middle" rgba="0.52 0.53 0.56 1" friction="1.5 0.3 0.1" contype="2" conaffinity="4"/>
+          <body name="hand_index_distal" pos="0.00275561951363186 0 0.0317024252223218">
+            <joint name="index_dip" type="hinge" pos="0 0 0" axis="0 1 0" limited="true" range="0.0 1.4" damping="0.1" armature="0.05"/>
+            <inertial pos="-0.00807040294819541 -1.95860155396688E-05 0.00803087332614133" mass="0.0033741266988187" fullinertia="1.62067265427891E-07 1.79090083185726E-07 1.32918139694536E-07 -1.030841487474E-10 -5.96264453690637E-08 1.05530285191432E-10"/>
+            <geom name="hand_index_distal_g" type="mesh" mesh="l20_index_distal" rgba="0.52 0.53 0.56 1" friction="1.5 0.3 0.1" contype="2" conaffinity="4"/>
+            <site name="hand_index_distal_tip" pos="-0.007815001998 -1.274375245e-05 0.02306352742"/>
+          </body>
+        </body>
+      </body>
+    </body>
+    <body name="hand_thumb_metacarpals_base1" pos="0.0039847 0.0050818 0.057392" quat="-2.597343467e-06 0.7071054825 0.7071080799 -2.597353008e-06">
+      <joint name="thumb_cmc_yaw" type="hinge" pos="0 0 0" axis="0 1 0" limited="true" range="0.0 1.4" damping="0.1" armature="0.05"/>
+      <inertial pos="0.00225106540143255 0.0106280781314811 0.00386496887062775" mass="0.0123197273270212" fullinertia="3.08398596758481E-06 4.73419522678173E-06 2.03268500392085E-06 -7.90434968870597E-08 4.99257949343636E-08 -1.89397292598919E-07"/>
+      <geom name="hand_thumb_metacarpals_base1_g" type="mesh" mesh="l20_thumb_metacarpals_base1" rgba="0.13 0.13 0.14 1" friction="1.5 0.3 0.1" contype="2" conaffinity="4"/>
+      <body name="hand_thumb_metacarpals_base2" pos="0.000784740002368223 0.0196077603627024 0.000308721957079858" quat="0.5870433239 0.3941828711 0.3941828711 0.5870433239">
+        <joint name="thumb_cmc_roll" type="hinge" pos="0 0 0" axis="0 1 0" limited="true" range="0.0 1.22" damping="0.1" armature="0.05"/>
+        <inertial pos="0.00119794122046318 0.00176288166433086 0.00980405746394286" mass="0.00459776097124383" fullinertia="7.31648689063878E-07 5.38489639105841E-07 3.72559163410338E-07 -4.16925980705595E-08 7.27793121012466E-08 -1.05409912056041E-07"/>
+        <geom name="hand_thumb_metacarpals_base2_g" type="mesh" mesh="l20_thumb_metacarpals_base2" rgba="0.13 0.13 0.14 1" friction="1.5 0.3 0.1" contype="2" conaffinity="4"/>
+        <body name="hand_thumb_metacarpals" pos="-0.000109690908352875 -0.00396440679180957 0.0307945044045898" quat="0.6938316966 0.136372934 0.136372934 -0.6938316962">
+          <joint name="thumb_cmc_pitch" type="hinge" pos="0 0 0" axis="0 1 0" limited="true" range="0.0 0.79" damping="0.1" armature="0.05"/>
+          <inertial pos="0.00549384865796482 0.00805524685758721 0.0258290762784949" mass="0.0119728760675928" fullinertia="4.12796153480032E-06 4.82110081302191E-06 1.21324079339986E-06 2.08264516047914E-08 1.78085589076533E-08 6.19419770800233E-08"/>
+          <geom name="hand_thumb_metacarpals_g" type="mesh" mesh="l20_thumb_metacarpals" rgba="0.52 0.53 0.56 1" friction="1.5 0.3 0.1" contype="2" conaffinity="4"/>
+          <body name="hand_thumb_proximal" pos="0.00857856380171737 0 0.0555715948082196">
+            <joint name="thumb_mcp" type="hinge" pos="0 0 0" axis="0 1 0" limited="true" range="0.0 1.05" damping="0.1" armature="0.05"/>
+            <inertial pos="-0.0011057174593414 0.000334119020688653 0.0128607021591473" mass="0.00515940162015082" fullinertia="4.56371524641978E-07 6.16289154720601E-07 2.4689422432426E-07 1.15255552260169E-09 8.11361744697202E-08 5.36536229784869E-09"/>
+            <geom name="hand_thumb_proximal_g" type="mesh" mesh="l20_thumb_proximal" rgba="0.52 0.53 0.56 1" friction="1.5 0.3 0.1" contype="2" conaffinity="4"/>
+            <body name="hand_thumb_distal" pos="0.0066653832125308 0 0.0342561774516276">
+              <joint name="thumb_dip" type="hinge" pos="0 0 0" axis="0 1 0" limited="true" range="0.0 1.22" damping="0.1" armature="0.05"/>
+              <inertial pos="-0.00636210776657178 4.14651450399844E-05 0.0118150620527104" mass="0.00614449456083594" fullinertia="3.71418540379979E-07 4.48768445500361E-07 1.66160918259876E-07 2.36548498459678E-10 -9.49666673834207E-08 -9.82614466952934E-10"/>
+              <geom name="hand_thumb_distal_g" type="mesh" mesh="l20_thumb_distal" rgba="0.52 0.53 0.56 1" friction="1.5 0.3 0.1" contype="2" conaffinity="4"/>
+              <site name="hand_thumb_distal_tip" pos="-0.005573592614 5.587935448e-09 0.0320051685"/>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </body>
+</mujocoinclude>

@@ -1,0 +1,23 @@
+<mujocoinclude>
+    <position name="hand_pinky_mcp_roll" joint="pinky_mcp_roll" kp="20.0" kv="1.0" forcerange="-8.0 8.0"/>
+    <position name="hand_pinky_mcp_pitch" joint="pinky_mcp_pitch" kp="20.0" kv="1.0" forcerange="-8.0 8.0"/>
+    <position name="hand_pinky_pip" joint="pinky_pip" kp="20.0" kv="1.0" forcerange="-8.0 8.0"/>
+    <position name="hand_pinky_dip" joint="pinky_dip" kp="20.0" kv="1.0" forcerange="-8.0 8.0"/>
+    <position name="hand_ring_mcp_roll" joint="ring_mcp_roll" kp="20.0" kv="1.0" forcerange="-8.0 8.0"/>
+    <position name="hand_ring_mcp_pitch" joint="ring_mcp_pitch" kp="20.0" kv="1.0" forcerange="-8.0 8.0"/>
+    <position name="hand_ring_pip" joint="ring_pip" kp="20.0" kv="1.0" forcerange="-8.0 8.0"/>
+    <position name="hand_ring_dip" joint="ring_dip" kp="20.0" kv="1.0" forcerange="-8.0 8.0"/>
+    <position name="hand_middle_mcp_roll" joint="middle_mcp_roll" kp="20.0" kv="1.0" forcerange="-8.0 8.0"/>
+    <position name="hand_middle_mcp_pitch" joint="middle_mcp_pitch" kp="20.0" kv="1.0" forcerange="-8.0 8.0"/>
+    <position name="hand_middle_pip" joint="middle_pip" kp="20.0" kv="1.0" forcerange="-8.0 8.0"/>
+    <position name="hand_middle_dip" joint="middle_dip" kp="20.0" kv="1.0" forcerange="-8.0 8.0"/>
+    <position name="hand_index_mcp_roll" joint="index_mcp_roll" kp="20.0" kv="1.0" forcerange="-8.0 8.0"/>
+    <position name="hand_index_mcp_pitch" joint="index_mcp_pitch" kp="20.0" kv="1.0" forcerange="-8.0 8.0"/>
+    <position name="hand_index_pip" joint="index_pip" kp="20.0" kv="1.0" forcerange="-8.0 8.0"/>
+    <position name="hand_index_dip" joint="index_dip" kp="20.0" kv="1.0" forcerange="-8.0 8.0"/>
+    <position name="hand_thumb_cmc_yaw" joint="thumb_cmc_yaw" kp="20.0" kv="1.0" forcerange="-8.0 8.0"/>
+    <position name="hand_thumb_cmc_roll" joint="thumb_cmc_roll" kp="20.0" kv="1.0" forcerange="-8.0 8.0"/>
+    <position name="hand_thumb_cmc_pitch" joint="thumb_cmc_pitch" kp="20.0" kv="1.0" forcerange="-8.0 8.0"/>
+    <position name="hand_thumb_mcp" joint="thumb_mcp" kp="20.0" kv="1.0" forcerange="-8.0 8.0"/>
+    <position name="hand_thumb_dip" joint="thumb_dip" kp="20.0" kv="1.0" forcerange="-8.0 8.0"/>
+</mujocoinclude>

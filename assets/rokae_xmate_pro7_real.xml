@@ -1,0 +1,88 @@
+<mujoco model="rokae_xmate_pro7_real">
+  <!-- Real URDF geometry: the actual xMate Pro7 STL meshes, driven by the exact
+       joint chain (axes / offsets / limits) from the URDF.
+       The meshes are bundled under assets/meshes/ (paths are relative to this
+       file), so the model loads on any machine - no rokae_ros2 checkout needed. -->
+  <compiler angle="radian" autolimits="true" balanceinertia="true"/>
+  <option timestep="0.02" gravity="0 0 0" integrator="Euler"/>
+
+  <default>
+    <joint damping="0.5" armature="0.02"/>
+    <motor ctrllimited="true" ctrlrange="-1 1" forcerange="-1 1"/>
+  </default>
+
+  <asset>
+    <mesh name="base"  file="meshes/xMatePro7/xMatePro7_base.stl"  scale="0.001 0.001 0.001"/>
+    <mesh name="link1" file="meshes/xMatePro7/xMatePro7_link1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="link2" file="meshes/xMatePro7/xMatePro7_link2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="link3" file="meshes/xMatePro7/xMatePro7_link3.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="link4" file="meshes/xMatePro7/xMatePro7_link4.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="link5" file="meshes/xMatePro7/xMatePro7_link5.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="link6" file="meshes/xMatePro7/xMatePro7_link6.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="link7" file="meshes/xMatePro7/xMatePro7_link7.stl" scale="0.001 0.001 0.001"/>
+    <texture name="tex" type="2d" builtin="checker" rgb1="0.16 0.16 0.16" rgb2="0.26 0.26 0.26" width="256" height="256"/>
+    <material name="floor" texture="tex" texrepeat="6 6" reflectance="0"/>
+  </asset>
+
+  <worldbody>
+    <light name="light" pos="2.0 -2.0 3.5" dir="-0.5 0.4 -1" diffuse="0.9 0.9 0.9" specular="0.1 0.1 0.1"/>
+    <camera name="cam_iso" pos="2.2 -2.2 1.9" xyaxes="0.7071 0.7071 0 -0.38 0.38 0.84" fovy="50"/>
+    <geom name="floor" type="plane" size="4 4 0.1" pos="0 0 -0.06" rgba="0.85 0.85 0.85 1" material="floor" contype="0" conaffinity="0"/>
+
+    <body name="base">
+      <geom type="mesh" mesh="base" contype="0" conaffinity="0" rgba="0.62 0.62 0.66 1"/>
+
+      <body name="link1" pos="0 0 0">
+        <joint name="joint1" type="hinge" axis="0 0 1" limited="true" range="-3.0527 3.0527"/>
+        <geom type="mesh" mesh="link1" contype="0" conaffinity="0" rgba="0.72 0.72 0.75 1"/>
+
+        <body name="link2" pos="0 0 0.404">
+          <joint name="joint2" type="hinge" axis="0 1 0" limited="true" range="-2.0933 2.0933"/>
+          <geom type="mesh" mesh="link2" contype="0" conaffinity="0" rgba="0.30 0.42 0.86 1"/>
+
+          <body name="link3" pos="0 0 0.23743878">
+            <joint name="joint3" type="hinge" axis="0 0 1" limited="true" range="-3.0527 3.0527"/>
+            <geom type="mesh" mesh="link3" pos="0 0 0.15549959" contype="0" conaffinity="0" rgba="0.30 0.42 0.86 1"/>
+
+            <body name="link4" pos="0 0 0.15549959">
+              <joint name="joint4" type="hinge" axis="0 1 0" limited="true" range="-2.0933 2.0933"/>
+              <geom type="mesh" mesh="link4" contype="0" conaffinity="0" rgba="0.30 0.42 0.86 1"/>
+
+              <body name="link5" pos="0 0 0.22044633">
+                <joint name="joint5" type="hinge" axis="0 0 1" limited="true" range="-3.0527 3.0527"/>
+                <geom type="mesh" mesh="link5" pos="0 0 0.14512568" contype="0" conaffinity="0" rgba="0.30 0.42 0.86 1"/>
+
+                <body name="link6" pos="0 0 0.14512568">
+                  <joint name="joint6" type="hinge" axis="0 1 0" limited="true" range="-2.0933 2.0933"/>
+                  <geom type="mesh" mesh="link6" contype="0" conaffinity="0" rgba="0.30 0.42 0.86 1"/>
+
+                  <body name="link7" pos="0 0 0.25090877">
+                    <joint name="joint7" type="hinge" axis="0 0 1" limited="true" range="-6.2832 6.2832"/>
+                    <geom type="mesh" mesh="link7" contype="0" conaffinity="0" rgba="0.30 0.42 0.86 1"/>
+                    <!-- Off-axis tool tip so every joint moves it. -->
+                    <site name="tool" pos="0 0.06 0.0"/>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+
+    <body name="target" mocap="true">
+      <geom name="target_geom" type="sphere" size="0.07" rgba="0.10 0.75 0.25 1" contype="0" conaffinity="0"/>
+      <site name="target_site" pos="0 0 0"/>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <motor name="a1" joint="joint1" gear="10.0"/>
+    <motor name="a2" joint="joint2" gear="10.0"/>
+    <motor name="a3" joint="joint3" gear="8.0"/>
+    <motor name="a4" joint="joint4" gear="6.0"/>
+    <motor name="a5" joint="joint5" gear="5.0"/>
+    <motor name="a6" joint="joint6" gear="4.0"/>
+    <motor name="a7" joint="joint7" gear="3.0"/>
+  </actuator>
+</mujoco>

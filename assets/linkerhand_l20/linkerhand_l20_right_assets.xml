@@ -1,0 +1,24 @@
+<mujocoinclude>
+    <mesh name="l20_base_link" file="linkerhand_l20/right/meshes/base_link.STL"/>
+    <mesh name="l20_pinky_metacarpals" file="linkerhand_l20/right/meshes/pinky_metacarpals.STL"/>
+    <mesh name="l20_pinky_proximal" file="linkerhand_l20/right/meshes/pinky_proximal.STL"/>
+    <mesh name="l20_pinky_middle" file="linkerhand_l20/right/meshes/pinky_middle.STL"/>
+    <mesh name="l20_pinky_distal" file="linkerhand_l20/right/meshes/pinky_distal.STL"/>
+    <mesh name="l20_ring_metacarpals" file="linkerhand_l20/right/meshes/ring_metacarpals.STL"/>
+    <mesh name="l20_ring_proximal" file="linkerhand_l20/right/meshes/ring_proximal.STL"/>
+    <mesh name="l20_ring_middle" file="linkerhand_l20/right/meshes/ring_middle.STL"/>
+    <mesh name="l20_ring_distal" file="linkerhand_l20/right/meshes/ring_distal.STL"/>
+    <mesh name="l20_middle_metacarpals" file="linkerhand_l20/right/meshes/middle_metacarpals.STL"/>
+    <mesh name="l20_middle_proximal" file="linkerhand_l20/right/meshes/middle_proximal.STL"/>
+    <mesh name="l20_middle_middle" file="linkerhand_l20/right/meshes/middle_middle.STL"/>
+    <mesh name="l20_middle_distal" file="linkerhand_l20/right/meshes/middle_distal.STL"/>
+    <mesh name="l20_index_metacarpals" file="linkerhand_l20/right/meshes/index_metacarpals.STL"/>
+    <mesh name="l20_index_proximal" file="linkerhand_l20/right/meshes/index_proximal.STL"/>
+    <mesh name="l20_index_middle" file="linkerhand_l20/right/meshes/index_middle.STL"/>
+    <mesh name="l20_index_distal" file="linkerhand_l20/right/meshes/index_distal.STL"/>
+    <mesh name="l20_thumb_metacarpals_base1" file="linkerhand_l20/right/meshes/thumb_metacarpals_base1.STL"/>
+    <mesh name="l20_thumb_metacarpals_base2" file="linkerhand_l20/right/meshes/thumb_metacarpals_base2.STL"/>
+    <mesh name="l20_thumb_metacarpals" file="linkerhand_l20/right/meshes/thumb_metacarpals.STL"/>
+    <mesh name="l20_thumb_proximal" file="linkerhand_l20/right/meshes/thumb_proximal.STL"/>
+    <mesh name="l20_thumb_distal" file="linkerhand_l20/right/meshes/thumb_distal.STL"/>
+</mujocoinclude>

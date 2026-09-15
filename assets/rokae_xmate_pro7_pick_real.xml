@@ -1,0 +1,170 @@
+<mujoco model="rokae_xmate_pro7_pick_real">
+  <!-- Pro7 with real URDF STL meshes + pinch gripper + RGB-D camera + red cube,
+       plus green/blue/yellow distractor blocks on the same bench.  The
+       distractors are deliberately *not* red so the red segmenter in
+       detect_red_cube.py keeps locking onto the target cube.
+       Two benches: the source bench (table, x>0) carries the cube and the
+       distractors; the destination bench (table2, +y side) carries a flat
+       "place pad" marking where the cube should be put down. -->
+  <compiler angle="radian" autolimits="true" balanceinertia="true"/>
+  <option timestep="0.02" gravity="0 0 0" integrator="Euler"/>
+
+  <default>
+    <joint damping="0.5" armature="0.01"/>
+    <geom friction="0.7 0.15 0.15" density="900"/>
+    <motor ctrllimited="true" ctrlrange="-1 1" forcerange="-1 1"/>
+  </default>
+
+  <asset>
+    <mesh name="base"  file="meshes/xMatePro7/xMatePro7_base.stl"  scale="0.001 0.001 0.001"/>
+    <mesh name="link1" file="meshes/xMatePro7/xMatePro7_link1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="link2" file="meshes/xMatePro7/xMatePro7_link2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="link3" file="meshes/xMatePro7/xMatePro7_link3.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="link4" file="meshes/xMatePro7/xMatePro7_link4.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="link5" file="meshes/xMatePro7/xMatePro7_link5.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="link6" file="meshes/xMatePro7/xMatePro7_link6.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="link7" file="meshes/xMatePro7/xMatePro7_link7.stl" scale="0.001 0.001 0.001"/>
+    <!-- LinkerHand L20 dexterous hand (vendored vendor URDF, converted to MJCF
+         fragments by convert_hand_urdf.py). -->
+    <include file="linkerhand_l20/linkerhand_l20_right_assets.xml"/>
+    <texture name="tex" type="2d" builtin="checker" rgb1="0.16 0.16 0.16" rgb2="0.26 0.26 0.26" width="256" height="256"/>
+    <material name="floor" texture="tex" texrepeat="6 6" reflectance="0"/>
+    <material name="red_glow" emission="0.25" rgba="1.0 0.03 0.03 1"/>
+    <material name="green_glow" emission="0.25" rgba="0.05 0.75 0.15 1"/>
+    <material name="blue_glow" emission="0.25" rgba="0.06 0.25 0.95 1"/>
+    <material name="yellow_glow" emission="0.25" rgba="0.95 0.80 0.05 1"/>
+    <material name="pad" rgba="0.12 0.55 0.60 1"/>
+  </asset>
+
+  <worldbody>
+    <light name="light" pos="3.0 -2.4 4.2" dir="-0.5 0.4 -1" diffuse="0.9 0.9 0.9" specular="0.1 0.1 0.1"/>
+    <camera name="cam_iso" pos="2.9 -2.9 2.4" xyaxes="0.7071 0.7071 0 -0.343 0.343 0.875" fovy="50"/>
+    <geom name="floor" type="plane" size="4 4 0.1" pos="0 0 -0.06" rgba="0.85 0.85 0.85 1" material="floor" contype="0" conaffinity="0"/>
+    <geom name="table" type="box" size="0.42 0.32 0.03" pos="0.78 0 0.42" rgba="0.55 0.45 0.32 1" contype="0" conaffinity="0"/>
+    <!-- Destination bench, on the +y side so it never overlaps the source
+         bench and sits outside the hand camera's view of the source bench. -->
+    <geom name="table2" type="box" size="0.30 0.26 0.03" pos="0.50 0.62 0.42" rgba="0.48 0.38 0.27 1" contype="0" conaffinity="0"/>
+    <!-- Flat pad marking the drop-off point; its top face is flush with the
+         bench top (0.45) so a cube placed at CUBE_Z rests on it. -->
+    <geom name="place_pad" type="box" size="0.05 0.05 0.002" pos="0.50 0.62 0.448" material="pad" contype="0" conaffinity="0"/>
+
+    <body name="base">
+      <geom type="mesh" mesh="base" contype="0" conaffinity="0" rgba="0.62 0.62 0.66 1"/>
+
+      <body name="link1" pos="0 0 0">
+        <joint name="joint1" type="hinge" axis="0 0 1" limited="true" range="-3.0527 3.0527"/>
+        <geom type="mesh" mesh="link1" contype="0" conaffinity="0" rgba="0.72 0.72 0.75 1"/>
+
+        <body name="link2" pos="0 0 0.404">
+          <joint name="joint2" type="hinge" axis="0 1 0" limited="true" range="-2.0933 2.0933"/>
+          <geom type="mesh" mesh="link2" contype="0" conaffinity="0" rgba="0.30 0.42 0.86 1"/>
+
+          <body name="link3" pos="0 0 0.23743878">
+            <joint name="joint3" type="hinge" axis="0 0 1" limited="true" range="-3.0527 3.0527"/>
+            <geom type="mesh" mesh="link3" pos="0 0 0.15549959" contype="0" conaffinity="0" rgba="0.30 0.42 0.86 1"/>
+
+            <body name="link4" pos="0 0 0.15549959">
+              <joint name="joint4" type="hinge" axis="0 1 0" limited="true" range="-2.0933 2.0933"/>
+              <geom type="mesh" mesh="link4" contype="0" conaffinity="0" rgba="0.30 0.42 0.86 1"/>
+
+              <body name="link5" pos="0 0 0.22044633">
+                <joint name="joint5" type="hinge" axis="0 0 1" limited="true" range="-3.0527 3.0527"/>
+                <geom type="mesh" mesh="link5" pos="0 0 0.14512568" contype="0" conaffinity="0" rgba="0.30 0.42 0.86 1"/>
+
+                <body name="link6" pos="0 0 0.14512568">
+                  <joint name="joint6" type="hinge" axis="0 1 0" limited="true" range="-2.0933 2.0933"/>
+                  <geom type="mesh" mesh="link6" contype="0" conaffinity="0" rgba="0.30 0.42 0.86 1"/>
+
+                  <body name="link7" pos="0 0 0.25090877">
+                    <joint name="joint7" type="hinge" axis="0 0 1" limited="true" range="-6.2832 6.2832"/>
+                    <geom type="mesh" mesh="link7" contype="0" conaffinity="0" rgba="0.30 0.42 0.86 1"/>
+
+                    <body name="gripper" pos="0 0 0.06">
+                      <!-- L20 wrist mount: the hand's own frame *is* the tool
+                           frame, so the fingers run along the old approach
+                           axis (+z) and the palm faces +x.  The exported
+                           fragment also carries the ``grasp_center`` site --
+                           the point where the closed fingertips meet, which is
+                           what the resolved-rate expert servos onto the cube.
+                           Fingers are driven as one open/close synergy (see
+                           grasp_common.HAND_*). -->
+                      <include file="linkerhand_l20/linkerhand_l20_right_body.xml"/>
+                      <!-- Eye-in-hand camera: in front of the palm's face
+                           (x=0.032) looking down the fingers at the cube.  It
+                           sits far enough out that the open fingers do not clip
+                           the target: at x=0.07 the red blob's centroid was
+                           5.7 px off the true projection, here it is 2.5 px. -->
+                      <light name="hand_light" pos="0.09 0 0.07" dir="1 0 0" type="point" diffuse="0.95 0.95 0.95" specular="0.2 0.2 0.2" cutoff="180"/>
+                      <camera name="cam_hand" pos="0.11 0 0.04" euler="3.14159265 0 0" fovy="55"/>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+
+    <body name="cube" pos="0 0 0.9">
+      <freejoint/>
+      <!-- contype 4 / conaffinity 6: the graspable bodies collide with the
+           L20 (bit 2, see convert_hand_urdf.py) and with each other (bit 4),
+           but never with the arm's or the hand's own meshes. -->
+      <geom name="cube_geom" type="box" size="0.025 0.025 0.025" material="red_glow" density="30000" friction="3 0.5 0.1" condim="6" contype="4" conaffinity="6"/>
+      <site name="cube_site" pos="0 0 0"/>
+    </body>
+
+    <!-- Distractor blocks: same size as the target cube, placed on the bench
+         inside the eye-in-hand camera's view but outside the target's sampling
+         band (x 0.66..0.90, y -0.08..0.08), so they are seen but never
+         mistaken for the red target.  They collide, so they also act as
+         physical obstacles the arm can hit while reaching for the cube.
+         Positions match grasp_common.DISTRACTORS (the env re-places them at
+         every reset). -->
+    <body name="distractor_green" pos="0.96 0.15 0.475">
+      <freejoint/>
+      <geom name="distractor_green_geom" type="box" size="0.025 0.025 0.025"
+            material="green_glow" density="30000" contype="4" conaffinity="6"/>
+    </body>
+    <body name="distractor_blue" pos="0.96 -0.15 0.475">
+      <freejoint/>
+      <geom name="distractor_blue_geom" type="box" size="0.025 0.025 0.025"
+            material="blue_glow" density="30000" contype="4" conaffinity="6"/>
+    </body>
+    <body name="distractor_yellow" pos="1.00 0.00 0.475">
+      <freejoint/>
+      <geom name="distractor_yellow_geom" type="box" size="0.025 0.025 0.025"
+            material="yellow_glow" density="30000" contype="4" conaffinity="6"/>
+    </body>
+
+    <body name="marker" mocap="true" pos="0 0 0.5">
+      <geom name="marker_geom" type="sphere" size="0.02" rgba="0.1 0.9 0.2 0.35" contype="0" conaffinity="0"/>
+      <site name="marker_site" pos="0 0 0"/>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <motor name="a1" joint="joint1" gear="10.0"/>
+    <motor name="a2" joint="joint2" gear="10.0"/>
+    <motor name="a3" joint="joint3" gear="8.0"/>
+    <motor name="a4" joint="joint4" gear="6.0"/>
+    <motor name="a5" joint="joint5" gear="5.0"/>
+    <motor name="a6" joint="joint6" gear="4.0"/>
+    <motor name="a7" joint="joint7" gear="3.0"/>
+    <!-- One position servo per L20 joint; the scene drives them together, as an
+         open/close synergy mapped from the single gripper action. -->
+    <include file="linkerhand_l20/linkerhand_l20_right_actuators.xml"/>
+  </actuator>
+
+  <sensor>
+    <jointpos name="jp1" joint="joint1"/><jointpos name="jp2" joint="joint2"/>
+    <jointpos name="jp3" joint="joint3"/><jointpos name="jp4" joint="joint4"/>
+    <jointpos name="jp5" joint="joint5"/><jointpos name="jp6" joint="joint6"/>
+    <jointpos name="jp7" joint="joint7"/><jointpos name="jgp" joint="middle_pip"/>
+    <jointvel name="jv1" joint="joint1"/><jointvel name="jv2" joint="joint2"/>
+    <jointvel name="jv3" joint="joint3"/><jointvel name="jv4" joint="joint4"/>
+    <jointvel name="jv5" joint="joint5"/><jointvel name="jv6" joint="joint6"/>
+    <jointvel name="jv7" joint="joint7"/><jointvel name="jgv" joint="middle_pip"/>
+  </sensor>
+</mujoco>

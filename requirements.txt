@@ -1,0 +1,16 @@
+# Core simulation + RL stack the project was developed against.
+mujoco>=3.2,<4
+gymnasium>=1.0,<2
+stable-baselines3>=2.3,<3
+torch>=2.2
+numpy>=1.26,<3
+
+# Vision / analysis / reporting
+scipy>=1.11          # faster connected-component labelling in detect_red_cube
+matplotlib>=3.8      # curves and montages
+imageio>=2.33        # gif export
+imageio-ffmpeg>=0.5  # mp4 export in eval_rollout
+tensorboard>=2.15    # training logs + learning-curve plots
+
+# Tests
+pytest>=7.4

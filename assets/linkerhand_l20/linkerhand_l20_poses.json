@@ -1,0 +1,91 @@
+{
+  "close": {
+    "index_dip": 0.868,
+    "index_mcp_pitch": 1.008,
+    "index_mcp_roll": 0.0,
+    "index_pip": 1.2246000000000001,
+    "middle_dip": 0.868,
+    "middle_mcp_pitch": 1.008,
+    "middle_mcp_roll": 0.0,
+    "middle_pip": 1.2246000000000001,
+    "pinky_dip": 0.868,
+    "pinky_mcp_pitch": 1.008,
+    "pinky_mcp_roll": 0.0,
+    "pinky_pip": 1.2246000000000001,
+    "ring_dip": 0.868,
+    "ring_mcp_pitch": 1.008,
+    "ring_mcp_roll": 0.0,
+    "ring_pip": 1.2246000000000001,
+    "thumb_cmc_pitch": 0.474,
+    "thumb_cmc_roll": 0.61,
+    "thumb_cmc_yaw": 0.84,
+    "thumb_dip": 0.671,
+    "thumb_mcp": 0.6825000000000001
+  },
+  "fingers": {
+    "index": [
+      "hand_index_metacarpals_g",
+      "hand_index_proximal_g",
+      "hand_index_middle_g",
+      "hand_index_distal_g"
+    ],
+    "middle": [
+      "hand_middle_metacarpals_g",
+      "hand_middle_proximal_g",
+      "hand_middle_middle_g",
+      "hand_middle_distal_g"
+    ],
+    "palm": [
+      "hand_base_link_g"
+    ],
+    "pinky": [
+      "hand_pinky_metacarpals_g",
+      "hand_pinky_proximal_g",
+      "hand_pinky_middle_g",
+      "hand_pinky_distal_g"
+    ],
+    "ring": [
+      "hand_ring_metacarpals_g",
+      "hand_ring_proximal_g",
+      "hand_ring_middle_g",
+      "hand_ring_distal_g"
+    ],
+    "thumb": [
+      "hand_thumb_metacarpals_base1_g",
+      "hand_thumb_metacarpals_base2_g",
+      "hand_thumb_metacarpals_g",
+      "hand_thumb_proximal_g",
+      "hand_thumb_distal_g"
+    ]
+  },
+  "grasp_center": [
+    0.05,
+    -0.005701943076802434,
+    0.135
+  ],
+  "open": {
+    "index_dip": 0.0,
+    "index_mcp_pitch": 0.0,
+    "index_mcp_roll": 0.0,
+    "index_pip": 0.0,
+    "middle_dip": 0.0,
+    "middle_mcp_pitch": 0.0,
+    "middle_mcp_roll": 0.0,
+    "middle_pip": 0.0,
+    "pinky_dip": 0.0,
+    "pinky_mcp_pitch": 0.0,
+    "pinky_mcp_roll": 0.0,
+    "pinky_pip": 0.0,
+    "ring_dip": 0.0,
+    "ring_mcp_pitch": 0.0,
+    "ring_mcp_roll": 0.0,
+    "ring_pip": 0.0,
+    "thumb_cmc_pitch": 0.0,
+    "thumb_cmc_roll": 0.0,
+    "thumb_cmc_yaw": 0.0,
+    "thumb_dip": 0.0,
+    "thumb_mcp": 0.0
+  },
+  "side": "right",
+  "source": "linkerhand_l20/right/linkerhand_l20_right.urdf"
+}

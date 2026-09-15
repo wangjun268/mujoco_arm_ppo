@@ -1,0 +1,68 @@
+<mujoco model="three_joint_arm">
+  <compiler angle="radian" autolimits="true"/>
+  <!-- Zero-gravity reacher: pure inertial control, mirrors the planar task. -->
+  <option timestep="0.02" gravity="0 0 0" integrator="Euler"/>
+
+  <default>
+    <joint damping="0.4" armature="0.02"/>
+    <geom friction="0.6 0.1 0.1" density="300"/>
+    <motor ctrllimited="true" ctrlrange="-1 1" forcerange="-1 1"/>
+  </default>
+
+  <asset>
+    <texture name="tex" type="2d" builtin="checker" rgb1="0.18 0.18 0.18" rgb2="0.28 0.28 0.28" width="256" height="256"/>
+    <material name="floor" texture="tex" texrepeat="5 5" reflectance="0.3"/>
+  </asset>
+
+  <worldbody>
+    <light name="light" pos="1.5 -1.0 2.5" dir="-0.4 0.3 -1" diffuse="0.9 0.9 0.9" specular="0.1 0.1 0.1"/>
+    <camera name="cam_iso" pos="1.6 -1.6 1.3" xyaxes="0.7071 0.7071 0 -0.3536 0.3536 0.8698" fovy="50"/>
+    <!-- Floor is purely visual (no contact) so the arm can never get stuck. -->
+    <geom name="floor" type="plane" size="3 3 0.1" pos="0 0 -0.14" rgba="0.85 0.85 0.85 1" material="floor" contype="0" conaffinity="0"/>
+
+    <!-- Base with yaw joint about world z. -->
+    <body name="base" pos="0 0 0">
+      <joint name="j1" type="hinge" axis="0 0 1"/>
+      <geom name="base_cyl" type="cylinder" size="0.06 0.06" pos="0 0 0.03" rgba="0.45 0.45 0.45 1"/>
+      <geom name="base_joint_ball" type="sphere" size="0.05" pos="0 0 0.02" rgba="0.35 0.35 0.35 1"/>
+      <site name="base_site" pos="0 0 0"/>
+
+      <!-- Upper arm: shoulder pitch about local y. -->
+      <body name="upper" pos="0 0 0">
+        <joint name="j2" type="hinge" axis="0 1 0"/>
+        <geom name="upper_bearing" type="sphere" size="0.05" pos="0 0 0" rgba="0.6 0.6 0.6 1"/>
+        <geom name="upper_geom" type="capsule" fromto="0 0 0 0.5 0 0" size="0.035" rgba="0.80 0.25 0.25 1"/>
+        <site name="elbow" pos="0.5 0 0"/>
+
+        <!-- Forearm: elbow pitch about local y. -->
+        <body name="fore" pos="0.5 0 0">
+          <joint name="j3" type="hinge" axis="0 1 0"/>
+          <geom name="fore_bearing" type="sphere" size="0.05" pos="0 0 0" rgba="0.6 0.6 0.6 1"/>
+          <geom name="fore_geom" type="capsule" fromto="0 0 0 0.45 0 0" size="0.035" rgba="0.25 0.35 0.80 1"/>
+          <site name="tip" pos="0.45 0 0"/>
+        </body>
+      </body>
+    </body>
+
+    <!-- Kinematic 3D target (mocap, massless, no contact). -->
+    <body name="target" mocap="true">
+      <geom name="target_geom" type="sphere" size="0.06" rgba="0.10 0.75 0.25 1" contype="0" conaffinity="0"/>
+      <site name="target_site" pos="0 0 0"/>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <motor name="a1" joint="j1" gear="6.0"/>
+    <motor name="a2" joint="j2" gear="6.0"/>
+    <motor name="a3" joint="j3" gear="4.0"/>
+  </actuator>
+
+  <sensor>
+    <jointpos name="jp1" joint="j1"/>
+    <jointpos name="jp2" joint="j2"/>
+    <jointpos name="jp3" joint="j3"/>
+    <jointvel name="jv1" joint="j1"/>
+    <jointvel name="jv2" joint="j2"/>
+    <jointvel name="jv3" joint="j3"/>
+  </sensor>
+</mujoco>
