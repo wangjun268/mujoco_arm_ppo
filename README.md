@@ -75,6 +75,7 @@ train_live.py              real-time training-process GIF (pick & place by defau
 
 results/                   saved model, logs, videos, plots
 tests/                     pytest smoke + regression suite
+ros2_ws/                   ROS 2 workspace: Pro7 pick & place node + client
 ```
 
 Everything that needs the repository root, the MuJoCo assets or the results
@@ -93,6 +94,35 @@ The suite pins the environment observation layouts and the reacher/pick
 contracts.  Observation sizes and order are *checkpoint ABI*: changing them
 invalidates the trained `results/ppo_*.zip` files, and the tests are there to
 catch that.
+
+## ROS 2 node
+
+`ros2_ws/` wraps the whole pick & place cell in one ROS 2 node
+(`pro7_pick_place_ros`): it publishes the 7 arm + 21 hand joint states, the TF
+chain, the eye-in-hand RGB-D frames and the detected cube, offers a `reset`
+service and runs one full cycle through a `PickPlace` action.  Nothing is
+re-implemented: the node drives `grasp_common.iter_pick_and_place` (the
+step-wise form of the same scripted expert behind `pick_place_demo.py`) on a
+plant thread that owns the MuJoCo renderers.
+
+```bash
+./start.sh          # one click: build (if needed) + every node (node + rviz2)
+./start.sh --demo   # ...and run one pick & place by itself
+./start.sh --no-rviz   # headless machine / server
+./start.sh --stop      # stop it again
+
+cd ros2_ws && ./run.sh test    # 13 pytest cases (scene, expert, action end-to-end)
+```
+
+`pro7_pick_place.desktop` is the same thing for a double-click
+(`cp pro7_pick_place.desktop ~/.local/share/applications/`).  See
+[ros2_ws/README.md](ros2_ws/README.md) for the topic/service/action reference,
+the parameters and the design notes.
+
+Nothing in rviz?  The launch loads `config/pick_place.rviz` for you (Fixed Frame
+`world`, TF + markers + camera).  If you start `rviz2` by hand, pass the same
+file with `-d $(ros2 pkg prefix pro7_pick_place_ros)/share/pro7_pick_place_ros/config/pick_place.rviz`
+and make sure `ROS_DOMAIN_ID` matches the node's.
 
 ## Model
 

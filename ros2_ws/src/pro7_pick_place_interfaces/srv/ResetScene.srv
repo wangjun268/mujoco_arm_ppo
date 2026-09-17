@@ -1,0 +1,13 @@
+# Rebuild the cell (fresh MuJoCo state, cube and distractor blocks re-placed).
+# NaN in ``cube_position`` / ``place_target`` means "leave it to the node".
+
+int32 seed                    # scene RNG seed (ignored when randomize_cube is false)
+bool randomize_cube           # re-sample the cube on the source bench
+geometry_msgs/Point cube_position
+geometry_msgs/Point place_target
+---
+bool success
+string message
+uint32 scene_id               # increments on every reset
+geometry_msgs/Point cube_position
+geometry_msgs/Point place_target

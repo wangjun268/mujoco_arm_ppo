@@ -110,6 +110,10 @@ mujoco_arm_ppo/
 │   ├── rokae_pro7_pick.py    # Pro7 视觉抓取环境（obs 30）
 │   └── rokae_pro7_pick_place.py # Pro7 取放整段环境（obs 38）
 ├── tests/                    # pytest 冒烟 + 回归测试
+├── ros2_ws/                  # ROS 2 封装（取放节点 + 客户端 + 接口包）
+│   └── src/
+│       ├── pro7_pick_place_interfaces/  # msg/srv/action 接口
+│       └── pro7_pick_place_ros/         # 节点：话题/服务/Action + 植物线程
 └── results/                  # 训练产物（模型/日志/图片/视频/TensorBoard）
     ├── ppo_<env>.zip         # 各环境策略权重
     ├── tb_<env>/             # TensorBoard 事件（训练曲线）
@@ -482,6 +486,39 @@ def env_names(): ...
   - `<env>/montage.png`：逼近→命中拼图。
   - `logs/<env>_<n>.txt`：训练 stdout 日志（按环境/轮次命名）。
 
+### 4.10 ROS 2 封装层 `ros2_ws/`
+
+把整段七轴取放（`grasp_common` 的解析专家 + `detect_red_cube` 的眼在手视觉）
+封装成 ROS 2 节点，物理/视觉/控制律一行都不复制。
+
+- `src/pro7_pick_place_interfaces/`：`PickPlaceStatus.msg`、`ResetScene.srv`、
+  `PickPlace.action`（goal 里可给落点、方块初值、seed；feedback 给阶段与落点误差）。
+- `src/pro7_pick_place_ros/project.py`：定位 `mujoco_arm_ppo` 仓库并把根目录放上 `sys.path`。
+- `src/pro7_pick_place_ros/scene.py`：线程安全的 MuJoCo 场景（状态快照、TF 链、
+  RGB-D 检测/渲染、放置点搬移）。渲染器是 OpenGL 对象，只在**创建它的线程**里用，
+  误用会被 `_assert_renderer_thread()` 拦成异常而不是段错误。
+- `src/pro7_pick_place_ros/simulator.py`：植物线程 + 唯一作业。逐控制步推进
+  `grasp_common.iter_pick_and_place()`，负责相机渲染与场景复位；`sim_hz` 决定播放速度
+  （`0` = 不限速）。
+- `src/pro7_pick_place_ros/node.py`：话题（`status`/`joint_states`/`cube_pose`/
+  `detected_cube`/相机/`markers`/`/tf`）、服务（`reset`）、Action（`pick_place`）。
+- `src/pro7_pick_place_ros/client.py`：命令行客户端；`runtime.py`/`entry.py`：先选对解释器
+  （ROS 的 rclpy 在系统 Python、MuJoCo 在 Conda）再导入 rclpy/mujoco。
+- 详细接口表、参数表与设计说明见 `ros2_ws/README.md`。
+
+```bash
+cd /home/wj/mujoco_arm_ppo
+./start.sh                          # 一键：构建（如需）+ 起全部节点（pick_place_node + rviz2）
+./start.sh --demo --demo-seed 1     # 连 demo 客户端一起起：自动跑一次完整取放
+./start.sh --stop                   # 停掉（含 rviz / 真机栈）
+
+cd ros2_ws && ./run.sh              # 等价的工程内入口
+./run.sh ros2 launch pro7_pick_place_ros pick_place.launch.py demo:=true demo_seed:=1
+                                    # 连 demo 客户端一起起：自动跑一次完整取放
+./run.sh test                       # 13 个用例：场景 / 专家一致性 / 作业 / Action 端到端
+./run.sh ros2 run pro7_pick_place_ros pick_place_client --seed 1 --reset
+```
+
 ---
 
 ## 5. 关键设计决策（为什么这么做）
@@ -500,6 +537,8 @@ def env_names(): ...
 | 到达任务收敛到 `env/base_reacher.py` | 观测/动作/奖励/渲染只实现一次，2/3/6/7 轴不会各自漂移。 |
 | 抓取场景与专家收敛到 `grasp_common.py` | 台面/红块/夹爪尺寸与伺服增益只有一个来源；演示与环境的判据一致。 |
 | 取放的"搬运"由环境执行，而不是交给策略 | 搬运力矩仅占量程 1~2%，比模仿网络的动作噪声还小，学出来的搬运必掉块；环境负责准静态搬运，策略负责接近/夹紧/重试/松手。 |
+| 取放专家提供"逐控制步"生成器（`iter_pick_and_place`） | 阻塞版一次跑完几千步，外部驱动（ROS 节点、实时窗口）无法中途发布状态或取消；生成器让 `pick_and_place()`、节点、测试共用同一份控制律。 |
+| ROS 节点把 MuJoCo 渲染器收在一根植物线程里 | `mujoco.Renderer` 是 OpenGL 对象，跨线程创建/销毁会直接段错误（实测：边渲染边重建场景必崩），所以复位与渲染都排队给植物线程执行。 |
 | 观测维度与顺序被测试钉死 | 它们是 checkpoint 的 ABI，改坏了等于让已训练模型全部失效。 |
 
 ### 5.1 改动指引（维护者速查）

@@ -4,8 +4,9 @@ The workbench height, cube size, start pose and grasp geometry are used by the
 MuJoCo XML, the Gymnasium environment, the demo/montage scripts and the live
 viewers.  The end effector is the LinkerHand L20 dexterous hand (see
 ``convert_hand_urdf.py``); its 21 joints are driven as a single open/close
-synergy so the action space stays "7 arm torques + 1 grip command".  Keeping them here means tuning the scene is a one-line change instead
-of a hunt for scattered magic numbers.
+synergy so the action space stays "7 arm torques + 1 grip command".  Keeping
+them here means tuning the scene is a one-line change instead of a hunt for
+scattered magic numbers.
 
 The scene is built on the **real URDF STL meshes** of the Pro7
 (``rokae_xmate_pro7_pick_real.xml``) and carries green/blue/yellow distractor
@@ -535,6 +536,12 @@ def teacher_action_place(env) -> np.ndarray:
 # --------------------------------------------------------------------------- #
 # scripted pick & place (source bench -> destination bench)
 # --------------------------------------------------------------------------- #
+#: Control steps the approach phase may take before the pinch counts as a miss.
+APPROACH_STEPS = 200
+#: Control steps spent opening the jaws after the cube is parked on the pad.
+RELEASE_STEPS = 25
+
+
 @dataclass
 class PickPlaceResult:
     """Outcome of one scripted pick-and-place episode."""
@@ -549,13 +556,36 @@ class PickPlaceResult:
         return self.picked and self.placed
 
 
+@dataclass(frozen=True)
+class PickPlaceStep:
+    """One control step of the scripted expert (exactly one ``mj_step``).
+
+    :func:`iter_pick_and_place` yields one of these per physics step instead of
+    running the whole episode inside a single call, so a *driver* -- a raw
+    script loop, a live viewer, or the ROS 2 node -- can run the expert at its
+    own pace (and publish progress) without re-implementing the control law.
+    """
+
+    phase: str
+    step: int
+    holding: bool
+    target: np.ndarray
+    distance: float
+
+
 def _apply_action(model, data, ids: GraspIds, torques, closed: bool) -> None:
     data.ctrl[: ids.n_arm] = torques
     set_hand(data, ids, GRIP_CTRL_CLOSED if closed else GRIP_CTRL_OPEN)
     mujoco.mj_step(model, data)
 
 
-def _servo_to(
+def holding_cube(data: mujoco.MjData, ids: GraspIds) -> bool:
+    """True while enough fingers pinch the cube and the hand is closed on it."""
+    dist = float(np.linalg.norm(grasp_world(data, ids) - cube_world(data, ids)))
+    return is_grasped(data, ids, dist, gripper_gap(data, ids))
+
+
+def _servo_to_steps(
     model,
     data,
     ids: GraspIds,
@@ -564,10 +594,12 @@ def _servo_to(
     closed: bool = True,
     tol: float = TRANSPORT_TOL,
     max_steps: int = 120,
-    on_step=None,
     gentle: bool = True,
-) -> int:
-    """Drive the grasp centre onto ``target``; returns the steps used.
+):
+    """Walk the grasp centre onto ``target``, yielding after every step.
+
+    Yields ``(waypoint, distance)``: the sub-goal being chased this step and the
+    remaining distance to it.
 
     ``gentle=True`` walks the target in :data:`TRANSPORT_WAYPOINT` (1 cm)
     increments with the soft transport gains, which is what keeps a grasped cube
@@ -587,21 +619,41 @@ def _servo_to(
         else {}
     )
 
-    steps = 0
     for i in range(1, waypoints + 1):
         point = start + delta * (i / waypoints)
         for _ in range(max_steps):
             torques, _close, dist = servo_command(model, data, point, ids, **gains)
             _apply_action(model, data, ids, torques, closed)
-            steps += 1
-            if on_step is not None:
-                on_step()
+            yield point, dist
             if dist < tol:
                 break
+
+
+def _servo_to(
+    model,
+    data,
+    ids: GraspIds,
+    target,
+    *,
+    closed: bool = True,
+    tol: float = TRANSPORT_TOL,
+    max_steps: int = 120,
+    on_step=None,
+    gentle: bool = True,
+) -> int:
+    """Blocking form of :func:`_servo_to_steps`; returns the steps used."""
+    steps = 0
+    for _point, _dist in _servo_to_steps(
+        model, data, ids, target,
+        closed=closed, tol=tol, max_steps=max_steps, gentle=gentle,
+    ):
+        steps += 1
+        if on_step is not None:
+            on_step()
     return steps
 
 
-def pick_and_place(
+def iter_pick_and_place(
     model,
     data,
     ids: GraspIds,
@@ -609,36 +661,34 @@ def pick_and_place(
     *,
     cube_hint=None,
     settle_steps: int = SETTLE_STEPS,
-    on_step=None,
-    on_phase=None,
-) -> PickPlaceResult:
-    """Scripted expert for the two-bench task.
+    place: bool = True,
+    place_target=None,
+):
+    """Scripted expert for the two-bench task, one control step at a time.
 
     Phases: approach + grasp on the source bench, lift, carry across to the
-    destination pad, lower, release.  ``on_step`` (if given) is called after
-    every physics step and ``on_phase(name)`` at the start of each phase, which
-    is how the demo scripts record the motion.
+    destination pad, lower, release.  Every ``next()`` advances exactly one
+    physics step and yields a :class:`PickPlaceStep` describing the phase it
+    belongs to; the generator *returns* the final :class:`PickPlaceResult`
+    (readable from ``StopIteration.value``), which is what
+    :func:`pick_and_place` wraps.
+
+    ``place=False`` stops after the pinch (the plain grasp task of
+    ``grasp_demo``): the cube is held and the episode ends with
+    ``placed=False`` / ``reason='grasped'``.
+
+    ``place_target`` overrides :data:`PLACE_TARGET` (the drop-off point); the
+    ROS 2 node uses it to accept a new pad per goal.
     """
+    pad = PLACE_TARGET if place_target is None else np.asarray(place_target, dtype=float)
     steps = 0
-
-    def tick() -> None:
-        if on_step is not None:
-            on_step()
-
-    def phase(name: str) -> None:
-        if on_phase is not None:
-            on_phase(name)
-
-    def holding() -> bool:
-        dist = float(np.linalg.norm(grasp_world(data, ids) - cube_world(data, ids)))
-        return is_grasped(data, ids, dist, gripper_gap(data, ids))
+    phase = "approach"
 
     # --- 1) approach the detected cube and close the hand on it ----------
-    phase("approach")
     target = None if cube_hint is None else np.asarray(cube_hint, dtype=float)
     picked = False
     closing = False
-    for _ in range(200):
+    for _ in range(APPROACH_STEPS):
         # Keep re-detecting while reaching, but *freeze* the target once the
         # hand starts to close.  Re-detecting through the close makes the servo
         # chase a target that moves as the hand occludes the cube, which wedges
@@ -655,9 +705,12 @@ def pick_and_place(
         torques, close, _dist = servo_command(model, data, target, ids)
         _apply_action(model, data, ids, torques, close)
         steps += 1
-        tick()
         closing = closing or close
-        if holding():
+        held = holding_cube(data, ids)
+        yield PickPlaceStep(
+            phase, steps, held, np.asarray(target, dtype=float), float(_dist)
+        )
+        if held:
             picked = True
             break
     if not picked:
@@ -665,44 +718,106 @@ def pick_and_place(
 
     # --- 1b) let the cube seat in the hand -------------------------------
     if settle_steps:
-        phase("settle")
+        phase = "settle"
         for _ in range(settle_steps):
-            torques, _close, _dist = servo_command(model, data, target, ids)
+            torques, _close, dist = servo_command(model, data, target, ids)
             _apply_action(model, data, ids, torques, closed=True)
             steps += 1
-            tick()
-        if not holding():
-            return PickPlaceResult(True, cube_on_destination(data, ids), steps, "lost grip")
+            yield PickPlaceStep(
+                phase, steps, holding_cube(data, ids),
+                np.asarray(target, dtype=float), float(dist),
+            )
+        if not holding_cube(data, ids):
+            return PickPlaceResult(
+                True, cube_on_destination(data, ids, target=pad), steps, "lost grip"
+            )
+
+    if not place:  # the plain grasp task: hold the cube and stop here
+        return PickPlaceResult(True, False, steps, "grasped")
 
     # --- 2) lift clear of the source bench ------------------------------
-    phase("lift")
+    phase = "lift"
     lift = grasp_world(data, ids) + np.array([0.0, 0.0, LIFT_HEIGHT])
-    steps += _servo_to(model, data, ids, lift, on_step=tick)
-    if not holding():
-        return PickPlaceResult(True, cube_on_destination(data, ids), steps, "dropped on lift")
+    for point, dist in _servo_to_steps(model, data, ids, lift):
+        steps += 1
+        yield PickPlaceStep(
+            phase, steps, holding_cube(data, ids), point, float(dist)
+        )
+    if not holding_cube(data, ids):
+        return PickPlaceResult(
+            True, cube_on_destination(data, ids, target=pad), steps, "dropped on lift"
+        )
 
     # --- 3) carry the cube over to the destination bench -----------------
-    phase("transport")
-    over_place = PLACE_TARGET + np.array([0.0, 0.0, LIFT_HEIGHT])
-    steps += _servo_to(model, data, ids, over_place, on_step=tick)
-    if not holding():
+    phase = "transport"
+    over_place = pad + np.array([0.0, 0.0, LIFT_HEIGHT])
+    for point, dist in _servo_to_steps(model, data, ids, over_place):
+        steps += 1
+        yield PickPlaceStep(
+            phase, steps, holding_cube(data, ids), point, float(dist)
+        )
+    if not holding_cube(data, ids):
         return PickPlaceResult(
-            True, cube_on_destination(data, ids), steps, "dropped in transit"
+            True, cube_on_destination(data, ids, target=pad), steps, "dropped in transit"
         )
 
     # --- 4) lower onto the drop-off pad ---------------------------------
-    phase("lower")
-    steps += _servo_to(model, data, ids, PLACE_TARGET, on_step=tick)
+    phase = "lower"
+    for point, dist in _servo_to_steps(model, data, ids, pad):
+        steps += 1
+        yield PickPlaceStep(
+            phase, steps, holding_cube(data, ids), point, float(dist)
+        )
 
     # --- 5) release and settle -------------------------------------------
-    phase("release")
-    for _ in range(25):
-        torques, _close, _dist = servo_command(model, data, PLACE_TARGET, ids)
+    phase = "release"
+    for _ in range(RELEASE_STEPS):
+        torques, _close, dist = servo_command(model, data, pad, ids)
         _apply_action(model, data, ids, torques, closed=False)
         steps += 1
-        tick()
+        yield PickPlaceStep(
+            phase, steps, holding_cube(data, ids),
+            np.asarray(pad, dtype=float).copy(), float(dist),
+        )
 
-    placed = cube_on_destination(data, ids)
+    placed = cube_on_destination(data, ids, target=pad)
     return PickPlaceResult(
         True, placed, steps, "placed" if placed else "cube missed the pad"
     )
+
+
+def pick_and_place(
+    model,
+    data,
+    ids: GraspIds,
+    renderer=None,
+    *,
+    cube_hint=None,
+    settle_steps: int = SETTLE_STEPS,
+    place: bool = True,
+    place_target=None,
+    on_step=None,
+    on_phase=None,
+) -> PickPlaceResult:
+    """Blocking form of :func:`iter_pick_and_place`.
+
+    ``on_step()`` is called after every physics step and ``on_phase(name)`` when
+    the phase changes, which is how the demo scripts record the motion.
+    """
+    episode = iter_pick_and_place(
+        model, data, ids, renderer,
+        cube_hint=cube_hint, settle_steps=settle_steps, place=place,
+        place_target=place_target,
+    )
+    current = None
+    while True:
+        try:
+            step = next(episode)
+        except StopIteration as finished:
+            return finished.value
+        if step.phase != current:
+            current = step.phase
+            if on_phase is not None:
+                on_phase(current)
+        if on_step is not None:
+            on_step()

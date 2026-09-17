@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=MuJoCo 七轴抓取放置
+Name[en]=Pro7 pick & place (MuJoCo)
+Comment=一键启动 pick_place_node + rviz2
+Exec=bash -lc 'cd /home/wj/mujoco_arm_ppo && ./start.sh; echo; read -n1 -rsp "按任意键关闭…"'
+Path=/home/wj/mujoco_arm_ppo
+Icon=utilities-terminal
+Terminal=true
+Categories=Development;Robotics;Science;

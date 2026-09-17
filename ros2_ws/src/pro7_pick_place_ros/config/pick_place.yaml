@@ -1,0 +1,22 @@
+# Parameters of the Pro7 pick & place node.
+#
+# Every entry mirrors the node's own defaults; edit them and pass this file with
+#   ros2 run pro7_pick_place_ros pick_place_node --ros-args --params-file <file>
+# or start the launch file with  simulate:=false  to use the values below.
+/pro7_pick_place:
+  ros__parameters:
+    project_root: ""            # empty -> auto-detect the mujoco_arm_ppo checkout
+    model_path: ""              # empty -> assets/rokae_xmate_pro7_pick_real.xml
+    seed: 0                     # cube spot on the source bench
+    randomize_cube: false       # true ->每个 goal 换一个方块位置
+    place_target: [0.58, 0.52, 0.475]   # drop-off point; [0, 0, 0] -> project default
+    image_width: 320
+    image_height: 240
+    sim_hz: 240.0               # plant rate (0 = unthrottled, for tests/batches)
+    idle_mode: freeze           # freeze (hold the last pose) | step
+    vision_hz: 5.0              # eye-in-hand detection while idle (0 = off)
+    status_hz: 20.0             # PickPlaceStatus / JointState / TF rate
+    image_hz: 5.0               # camera + marker publish rate
+    publish_images: true        # render images only if someone subscribes
+    feedback_hz: 5.0            # action feedback rate during a goal
+    tf_prefix: ""               # e.g. "sim/" to keep this /tf tree apart from a real robot

@@ -38,7 +38,11 @@ PPO 训练 (train_ppo.py) ──► results/ppo_<env>.zip
    ├──► eval_rollout.py   指标 + 学习曲线 + 演示视频（--viewer 开窗口）
    ├──► viewer_demo.py    实时 MuJoCo 窗口
    ├──► make_montage.py   逼近→命中 静态拼图
-   └──► ik_probe*.py      解析 IK + PD 可行性基准（对比参照）
+└──► ik_probe*.py      解析 IK + PD 可行性基准（对比参照）
+
+取放专家 (grasp_common.iter_pick_and_place，逐控制步)
+   ├──► pick_place_demo.py   批处理演示 / GIF / 拼图
+   └──► ros2_ws/             ROS 2 节点：话题 + 服务 + PickPlace Action
 ```
 
 ---
@@ -156,6 +160,15 @@ python3 grasp_demo.py --episodes 10 --video         # 检测红块→3D坐标→
 python3 pick_place_demo.py --episodes 10 --video --montage   # 源台抓取→搬到目标台放置垫
 python3 make_grasp_montage.py
 python3 supervised_grasp.py --rounds 24            # 实时监督训练（在线 DAgger）
+
+# ---- ROS 2 封装（七轴取放节点）----
+./start.sh                                         # 一键：构建（如需）+ 起全部节点（节点 + rviz2）
+./start.sh --demo --demo-seed 1                    # 连 demo 客户端一起起，自动跑一次取放
+./start.sh --stop                                  # 停掉（含 rviz / 真机栈）
+cd ros2_ws && ./run.sh                             # 等价的工程内入口
+./run.sh ros2 launch pro7_pick_place_ros pick_place.launch.py demo:=true demo_seed:=1
+./run.sh test                                      # 13 个用例：场景/专家/作业/Action
+ros2 run pro7_pick_place_ros pick_place_client --seed 1 --reset
 # 用“真实 URDF 网格”版：训练或标记驱动
 python3 train_ppo.py --env pro7_pick_urdf --steps 800000
 

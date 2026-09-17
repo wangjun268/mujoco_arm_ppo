@@ -1,0 +1,24 @@
+# Run one pick & place cycle: approach the red cube on the source bench, pinch
+# it, lift, carry it across and release it on the drop-off pad.
+#
+# NaN in a point field means "use the node default / keep the current value".
+
+geometry_msgs/Point place_target   # drop-off point in world coordinates (m)
+geometry_msgs/Point cube_hint      # optional cube guess (m); NaN -> use the camera
+float64 seed                       # scene seed; NaN -> keep the current scene
+bool reset_scene                   # reshuffle the cube before starting
+bool pick_only                     # stop right after the pinch (no carry/release)
+---
+bool success                       # the requested task finished: picked, and placed
+                                   # too unless the goal was pick_only
+bool picked                        # the jaws pinched the cube
+bool placed                        # the cube rests on the pad, jaws open
+int32 steps                        # control steps the expert used
+float32 place_error                # final |cube - place_target| (m)
+string message                     # expert outcome ("placed", "dropped on lift", ...)
+---
+string phase                       # current expert phase
+int32 steps                        # control steps so far
+bool holding                       # jaws are pinching the cube
+float32 distance_to_goal           # |grasp centre - current sub-goal| (m)
+float32 place_error                # |cube - place_target| (m)

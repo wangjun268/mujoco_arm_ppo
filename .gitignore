@@ -7,3 +7,8 @@ __pycache__/
 # Generated training artefacts (models, logs, videos, curves)
 results/
 MUJOCO_LOG.TXT
+
+# colcon workspace artefacts (the ROS 2 wrapper)
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
