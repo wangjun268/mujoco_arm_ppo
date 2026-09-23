@@ -5,30 +5,35 @@ cubes in real time.  Two tasks (``--task grasp`` / ``--task pick_place``) and
 two drivers:
   * ``--mode expert``  — the resolved-rate servo teacher (reliable, ~90 %).
   * ``--mode policy`` — a supervised (DAgger) policy trained by
-    ``supervised_grasp.py`` / ``train_live.py`` (load ``--policy-path``).
+    :mod:`grasp.supervised` / :mod:`grasp.train_live` (load ``--policy-path``).
 
 A translucent green marker tracks the vision-localised cube point.  Close the
 window to stop; press ``T`` for a new random cube.
 
 Run::
 
-    python3 view_pick.py --mode expert
-    python3 view_pick.py --mode policy --policy-path results/pro7_pick/grasp_policy_online.pt
-    python3 view_pick.py --task pick_place --mode policy
+    python3 grasp/view.py --mode expert
+    python3 grasp/view.py --mode policy --policy-path results/pro7_pick/grasp_policy_online.pt
+    python3 grasp/view.py --task pick_place --mode policy
 """
 
 from __future__ import annotations
 
 import argparse
 import os
+import sys
 import time
+
+# Allow `python3 grasp/view.py` as well as `python3 -m grasp.view`.
+if __package__ in (None, ""):
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 os.environ.setdefault("LIBGL_ALWAYS_SOFTWARE", "1")
 os.environ.setdefault("GALLIUM_DRIVER", "llvmpipe")
 
 from env import make_env  # noqa: E402
-from grasp_common import set_marker, teacher_action, teacher_action_place  # noqa: E402
-from grasp_policy import OBS_DIM, OBS_DIM_PLACE, action, load_policy  # noqa: E402
+from grasp.common import set_marker, teacher_action, teacher_action_place  # noqa: E402
+from grasp.policy import OBS_DIM, OBS_DIM_PLACE, action, load_policy  # noqa: E402
 from live_viewer import KEY_T, LiveViewer  # noqa: E402
 from paths import results_path  # noqa: E402
 

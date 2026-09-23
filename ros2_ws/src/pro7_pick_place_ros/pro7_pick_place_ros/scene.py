@@ -2,7 +2,7 @@
 
 One :class:`GraspScene` owns everything MuJoCo-related (the Pro7 + LinkerHand
 L20 model, the physics state, the eye-in-hand RGB-D renderer).  It is a thin,
-thread-safe wrapper around :mod:`grasp_common`: the scene layout, the vision
+thread-safe wrapper around :mod:`grasp.common`: the scene layout, the vision
 helper and the expert all stay in the project, so the node can never drift from
 the demo scripts.
 
@@ -351,7 +351,7 @@ class GraspScene:
 
     def rgbd(self):
         """Render ``(colour, depth)`` of the eye-in-hand camera for publishing."""
-        from detect_red_cube import render_rgbd
+        from grasp.detect import render_rgbd
 
         with self.lock:
             if self._image_renderer is None:
@@ -361,7 +361,7 @@ class GraspScene:
 
     def camera_info(self):
         """``(fovy_deg, width, height, fx, fy, cx, cy)`` of the hand camera."""
-        from detect_red_cube import intrinsics
+        from grasp.detect import intrinsics
 
         with self.lock:
             height, width = self.image_size[1], self.image_size[0]

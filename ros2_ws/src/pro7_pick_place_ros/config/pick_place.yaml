@@ -20,3 +20,4 @@
     publish_images: true        # render images only if someone subscribes
     feedback_hz: 5.0            # action feedback rate during a goal
     tf_prefix: ""               # e.g. "sim/" to keep this /tf tree apart from a real robot
+    urdf_path: ""               # empty -> assets/<model>.urdf, published (latched) on /robot_description for rviz

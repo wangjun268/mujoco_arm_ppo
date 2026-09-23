@@ -2,19 +2,21 @@
 
 The arm grasps the red cube on the source bench (with green/blue/yellow
 distractor blocks around it) and puts it down on the drop-off pad of the
-destination bench.  Physics + vision are the same code paths as ``grasp_demo``
-(``grasp_common``), only the task is different: after pinching the cube the
+destination bench.  Physics + vision are the same code paths as
+:mod:`grasp.demo` (:mod:`grasp.common`), only the task is different: after pinching the cube the
 expert lifts it, carries it across and releases it.
 
 Run::
 
-    python3 pick_place_demo.py --episodes 5
-    python3 pick_place_demo.py --episodes 3 --video --montage
+    python3 grasp/pick_place_demo.py --episodes 5
+    python3 grasp/pick_place_demo.py --episodes 3 --video --montage
 """
 
 from __future__ import annotations
 
 import argparse
+import os
+import sys
 
 import imageio.v2 as imageio
 import matplotlib
@@ -24,7 +26,11 @@ import matplotlib.pyplot as plt
 import mujoco
 import numpy as np
 
-import grasp_common as gc
+# Allow `python3 grasp/pick_place_demo.py` as well as `python3 -m grasp.pick_place_demo`.
+if __package__ in (None, ""):
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import grasp.common as gc
 from paths import ensure_dir, results_path
 
 

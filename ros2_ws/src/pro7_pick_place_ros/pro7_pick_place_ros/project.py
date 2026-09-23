@@ -2,10 +2,10 @@
 
 This package is a *driver*, not a re-implementation: the scene, the vision
 pipeline and the scripted expert all live in the plain-Python project at the
-checkout root (``grasp_common.py``, ``detect_red_cube.py``, ``paths.py``, ...).
-The node therefore only has to find that root and put it on ``sys.path``; no
-copy of the scene, the controller or the hand calibration lives in the ROS
-package, so tuning the project keeps working for the node.
+checkout (``grasp/common.py``, ``grasp/detect.py``, ``paths.py``, ...).  The
+node therefore only has to find that root and put it on ``sys.path``; no copy
+of the scene, the controller or the hand calibration lives in the ROS package,
+so tuning the project keeps working for the node.
 
 Resolution order:
 
@@ -23,7 +23,7 @@ import sys
 from typing import Iterator, Optional, Tuple
 
 #: Files that must exist for a directory to be the checkout root.
-_MARKERS = ("grasp_common.py", "detect_red_cube.py", "paths.py")
+_MARKERS = ("grasp/common.py", "grasp/detect.py", "paths.py")
 
 
 def looks_like_project(path: str) -> bool:
@@ -60,19 +60,19 @@ def find_project_root(explicit: Optional[str] = None) -> str:
             return candidate
     raise RuntimeError(
         "mujoco_arm_ppo checkout not found; pass the 'project_root' parameter "
-        "(or set MUJOCO_ARM_PPO_ROOT) to the directory that holds grasp_common.py"
+        "(or set MUJOCO_ARM_PPO_ROOT) to the directory that holds the grasp/ package"
     )
 
 
 def import_project(project_root: str) -> Tuple[object, object]:
-    """Put ``project_root`` on ``sys.path``; return ``(grasp_common, paths)``."""
+    """Put ``project_root`` on ``sys.path``; return ``(grasp.common, paths)``."""
     if project_root not in sys.path:
         sys.path.insert(0, project_root)
-    return importlib.import_module("grasp_common"), importlib.import_module("paths")
+    return importlib.import_module("grasp.common"), importlib.import_module("paths")
 
 
 def import_module(name: str, project_root: str):
-    """Import ``name`` from the checkout (``detect_red_cube``, ``env``, ...)."""
+    """Import ``name`` from the checkout (``grasp.detect``, ``env``, ...)."""
     if project_root not in sys.path:
         sys.path.insert(0, project_root)
     return importlib.import_module(name)

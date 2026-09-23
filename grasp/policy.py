@@ -1,9 +1,9 @@
 """The small MLP grasp policy shared by the training and visualisation scripts.
 
-``supervised_grasp`` / ``train_live`` train it, ``visualize_grasp`` /
-``view_pick`` replay it.  Keeping it (and its observation/action dimensions) in
-one module means a checkpoint always loads into the same architecture, no matter
-which script produced it.
+:mod:`grasp.supervised` / :mod:`grasp.train_live` train it, :mod:`grasp.visualize`
+/ :mod:`grasp.view` replay it.  Keeping it (and its observation/action
+dimensions) in one module means a checkpoint always loads into the same
+architecture, no matter which script produced it.
 """
 
 from __future__ import annotations

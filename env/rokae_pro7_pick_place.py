@@ -8,10 +8,10 @@ pad (or the step budget runs out).
 
 Two things are worth knowing about the plant:
 
-* The pinch is weak (~0.3 N, see :mod:`grasp_common`), so the carry has to be
+* The pinch is weak (~0.3 N, see :mod:`grasp.common`), so the carry has to be
   walked in centimetre waypoints with soft gains or the cube is squeezed out of
   the jaws.  That sub-goal walk lives in the environment
-  (:class:`grasp_common.PlacePlanner`) and is published in the observation
+  (:class:`grasp.common.PlacePlanner`) and is published in the observation
   (``goal_rel``), which is exactly what the expert teacher servos to: the
   policy learns the closed-loop controller for the approach and the pinch.
 * Carrying is done by the plant (**transport mode**): the torque that holds the
@@ -36,7 +36,7 @@ import mujoco
 import numpy as np
 from gymnasium import spaces
 
-import grasp_common as gc
+import grasp.common as gc
 
 from .rokae_pro7_pick import RokaePro7Pick
 
@@ -102,7 +102,7 @@ class RokaePro7PickPlace(RokaePro7Pick):
         #: Latched "the jaws have started closing" flag.  Re-detecting the cube
         #: through the pinch makes the servo chase a target that moves as the
         #: hand occludes (and pushes) it, which wedges the cube out past the
-        #: fingertips - the same trap ``grasp_common.pick_and_place`` freezes its
+        #: fingertips - the same trap ``grasp.common.pick_and_place`` freezes its
         #: target for.
         self.closing = False
         self._pinch_paid = False

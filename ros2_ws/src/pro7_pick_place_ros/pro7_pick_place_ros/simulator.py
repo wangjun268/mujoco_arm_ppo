@@ -7,7 +7,7 @@ The node never touches MuJoCo itself: this module owns
 * at most **one** :class:`PickPlaceJob` at a time, so two goals can never fight
   over the same arm.
 
-A job is the step-wise expert from :func:`grasp_common.iter_pick_and_place`,
+A job is the step-wise expert from :func:`grasp.common.iter_pick_and_place`,
 advanced one control step per plant tick.  That means a goal plays out at
 wall-clock speed (watchable, and the ROS timers keep publishing while it runs)
 instead of blocking one long call -- see ``sim_hz`` to speed it up.

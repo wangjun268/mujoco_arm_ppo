@@ -3,9 +3,9 @@
 import numpy as np
 import pytest
 
-import grasp_common as gc
-from detect_red_cube import project_world, red_mask, segment_red
 from env import make_env
+import grasp.common as gc
+from grasp.detect import project_world, red_mask, segment_red
 
 
 def test_make_scene_places_the_cube_on_the_bench():
@@ -38,8 +38,9 @@ def test_pick_env_uses_the_urdf_scene():
     alias = make_env("pro7_pick_urdf")
     assert env.model_path.endswith("rokae_xmate_pro7_pick_real.xml")
     assert env.model_path == alias.model_path
-    # 8 Pro7 meshes + the 22 STL parts of the L20.
-    assert env.model.nmesh == alias.model.nmesh == 30
+    # 8 Pro7 meshes + the 22 STL parts of the L20 + the wrist adapter that
+    # spans the 60 mm between them (tools/make_wrist_flange.py).
+    assert env.model.nmesh == alias.model.nmesh == 31
     assert env.model.ngeom == alias.model.ngeom
     env.close()
     alias.close()
@@ -144,10 +145,10 @@ def test_detector_ignores_coloured_distractors():
 
 
 def test_expert_servo_grasps_the_cube():
-    """The scripted expert from grasp_demo must still grasp a random cube."""
+    """The scripted expert from :mod:`grasp.demo` must still grasp a random cube."""
     import mujoco
 
-    from grasp_demo import run_grasp
+    from grasp.demo import run_grasp
 
     model, data, _cube = gc.make_scene(seed=0)
     renderer = mujoco.Renderer(model, height=240, width=320)
@@ -167,7 +168,7 @@ def test_cube_ends_up_inside_the_hand():
     """
     import mujoco
 
-    from grasp_demo import run_grasp
+    from grasp.demo import run_grasp
 
     model, data, cube_xyz = gc.make_scene(seed=0)
     ids = gc.scene_ids(model)
@@ -251,7 +252,7 @@ def test_policy_roundtrip(tmp_path):
     """A saved policy reloads into the same architecture (checkpoint compatibility)."""
     import torch
 
-    from grasp_policy import ACT_DIM, OBS_DIM, Policy, action, load_policy
+    from grasp.policy import ACT_DIM, OBS_DIM, Policy, action, load_policy
 
     policy = Policy()
     obs = np.zeros(OBS_DIM, dtype=np.float32)
@@ -282,7 +283,7 @@ def test_place_env_observation_layout():
 
 def test_place_planner_walks_every_leg():
     """The carry is a centimetre walk: one waypoint per update, never a jump."""
-    import grasp_common as gc
+    import grasp.common as gc
 
     start = np.array([gc.CUBE_X, 0.0, gc.CUBE_Z])
     plan = gc.PlacePlanner()
@@ -301,7 +302,7 @@ def test_place_planner_walks_every_leg():
 
 def test_place_teacher_picks_and_places():
     """End-to-end: the plan + expert carry the cube onto the destination pad."""
-    from grasp_common import teacher_action_place
+    from grasp.common import teacher_action_place
 
     for seed in (0, 1):
         env = make_env("pro7_pick_place", obs_target="true")

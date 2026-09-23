@@ -7,9 +7,9 @@
 - **服务**重建场景（重新采样方块、改放置点）；
 - **Action** 跑一次完整取放（带阶段反馈、可取消）。
 
-节点本身**不重新实现任何控制律**：物理、视觉和解析专家全部来自仓库根部的
-`grasp_common.py` / `detect_red_cube.py`，改一次参数两边同时生效
-（`pick_place_demo.py` 跑什么，节点就跑什么）。
+节点本身**不重新实现任何控制律**：物理、视觉和解析专家全部来自仓库里的
+`grasp/` 包（`grasp/common.py` / `grasp/detect.py`），改一次参数两边同时生效
+（`grasp/pick_place_demo.py` 跑什么，节点就跑什么）。
 
 ---
 
@@ -108,7 +108,7 @@ ros2 run pro7_pick_place_ros pick_place_client --seed 1 --reset
 | 参数 | 默认 | 说明 |
 |---|---|---|
 | `simulate` | `true` | 起不起 `pick_place_node` |
-| `rviz` | `true` | 起不起 `rviz2`（带 `config/pick_place.rviz`：TF + markers + 相机图） |
+| `rviz` | `true` | 起不起 `rviz2`（带 `config/pick_place.rviz`：RobotModel + TF + markers + 相机图） |
 | `demo` | `false` | 额外跑一次 `pick_place_client`（节点起来 8 s 后发一个 goal，跑完整取放） |
 | `demo_seed` / `demo_reset` / `demo_pick_only` | `""` / `false` / `false` | 那个 demo goal 的 seed / 是否重采样 / 是否只抓不放 |
 | `namespace` | `""` | 节点命名空间（同时作用于节点、rviz、demo 客户端） |
@@ -130,6 +130,7 @@ ros2 run pro7_pick_place_ros pick_place_client --seed 1 --reset
 | `/pro7_pick_place/camera/{color,depth}/camera_info` | `CameraInfo` | 针孔模型（`plumb_bob`，零畸变），frame 为 `cam_hand_optical` |
 | `/pro7_pick_place/markers` | `visualization_msgs/MarkerArray` | 放置垫、方块、检测点、当前子目标（给 rviz） |
 | `/tf` | `tf2_msgs/TFMessage` | `world → base → link1…link7 → gripper → tool0 / cam_hand → cam_hand_optical` |
+| `/robot_description` | `std_msgs/String` | 机械臂 + 手的 URDF（**Transient Local 锁存**），rviz 的 RobotModel 显示项靠它画网格，见 §8 |
 
 > 相机话题只在**有订阅者**时才渲染：没人看就不做额外的 OpenGL 渲染。
 > 图像/深度按 **ROS 光学坐标系**（x 右、y 下、z 沿视线）发布，深度是沿视线的
@@ -155,7 +156,7 @@ ros2 service call /pro7_pick_place/reset pro7_pick_place_interfaces/srv/ResetSce
 | `place_target` | goal | 落点（世界坐标，m）；缺省/NaN 分量沿用当前落点 |
 | `cube_hint` | goal | 方块初值；全 NaN 表示用相机检测 |
 | `seed` / `reset_scene` | goal | 是否在开始前重采样方块（`seed` 给定则落点可复现） |
-| `pick_only` | goal | 只抓不放（等价于 `grasp_demo` 的任务） |
+| `pick_only` | goal | 只抓不放（等价于 `grasp.demo` 的任务） |
 | `phase` / `steps` / `holding` / `distance_to_goal` / `place_error` | feedback | 约 5 Hz |
 | `success` / `picked` / `placed` / `steps` / `place_error` / `message` | result | `message` 是专家给出的原因（`placed`、`dropped on lift`、`grasped`…） |
 
@@ -176,6 +177,7 @@ ros2 service call /pro7_pick_place/reset pro7_pick_place_interfaces/srv/ResetSce
 | `publish_images` | `true` | 关掉则完全不渲染相机图 |
 | `feedback_hz` | `5.0` | Action 反馈频率 |
 | `tf_prefix` | `""` | 例如 `sim/`，把仿真 TF 树与真机 `/tf` 区分开 |
+| `urdf_path` | `""` | 发到 `/robot_description` 的 URDF；空 = `<model_path 同名>.urdf`（即 `tools/convert_arm_urdf.py` 的默认输出位置） |
 
 ## 5. 用法示例
 
@@ -255,7 +257,7 @@ ROBOT_STACK_CMDS=(
    因此节点用 `defer_renderers=True` 建场景，由植物线程负责建渲染器、渲染相机图、
    执行复位；ROS 定时器只读取快照。`scene.py` 里的 `_assert_renderer_thread()`
    会把这类误用变成明确报错而不是崩溃。
-2. **作业在植物线程上一步一步跑**。`grasp_common.iter_pick_and_place()` 是解析专家的
+2. **作业在植物线程上一步一步跑**。`grasp.common.iter_pick_and_place()` 是解析专家的
    逐控制步生成器（`pick_and_place()` 是它的阻塞包装，行为逐位一致，有测试钉住）。
    节点每个 tick 推进一步，所以取放是「实时可见」的，期间状态/相机照常发布；
    `sim_hz` 决定播放速度，`sim_hz:=0` 直接不限速跑完。
@@ -288,7 +290,7 @@ ROBOT_STACK_CMDS=(
 
 ### rviz 里看不到东西？
 
-按这四条查（前两条最常见）：
+按这五条查（前两条最常见）：
 
 1. **配置没加载**：rviz 必须用本包的布局文件启动，Fixed Frame 才是 `world`、显示项才齐全：
 
@@ -309,6 +311,37 @@ ROBOT_STACK_CMDS=(
    rviz 里的 Fixed Frame 要相应改成 `sim/world`。
 4. **相机图是“有订阅才渲染”**：Image 显示项加载后（Best Effort QoS）图像才会出现，
    `ros2 topic hz /pro7_pick_place/camera/color/image_raw` 应从 0 变成 ~5 Hz。
+5. **只有关节坐标系、没有机械臂模型**：本包默认已经能画出来了，如果看不到臂身，
+   按下面查。rviz 的 RobotModel 显示项必须拿到 URDF 才会画网格
+   （`/markers` 里只有放置垫、方块、目标点这些几何基元，没有臂身），而这个 URDF
+   由节点从仓库根目录的 `assets/<model>.urdf` 读出、锁存发到 `/robot_description`：
+
+   ```bash
+   python3 /home/wj/mujoco_arm_ppo/tools/convert_arm_urdf.py --check   # 没有就生成
+   ros2 topic info /robot_description -v                         # Durability 应为 TRANSIENT_LOCAL
+   ros2 topic echo /robot_description --once --qos-durability transient_local | head -c 200
+   ```
+
+   节点启动日志里应有 `robot description: ... (9 links, 8 joints) -> /robot_description`；
+   如果打印的是 `no robot description at ...`，照日志里的命令跑一次转换器即可
+   （`--with-cell` 还能把两张台面也一起导出来）。文件路径换了地方、或想指向别处，
+   用参数 `urdf_path:=/abs/path/robot.urdf` 覆盖。
+
+   配置 `config/pick_place.rviz` 里已带一个 `RobotModel` 显示项
+   （Description Source = Topic，topic = `/robot_description`，
+   **Durability Policy = Transient Local**，因为 rviz 通常在节点之后才起来）。
+   用 `--rviz` 之外的裸 rviz 时，Displays → Add → `rviz_default_plugins/RobotModel`
+   手工加一个，topic 同上；Description Source 选 `File` 指向
+   `file:///home/wj/mujoco_arm_ppo/assets/rokae_xmate_pro7_pick_real.urdf` 也行。
+   用 `tf_prefix:=sim/` 时记得把这个显示项的 **TF Prefix** 也填 `sim/`，否则它按
+   名字找不到连杆。
+
+   默认导出把 L20 的 22 根手指按“张开”姿态烘进了 `gripper` 连杆，因为节点只发到
+   `gripper` 这一层 TF，rviz 也只能按 TF 摆放连杆——名字和 TF / `joint_states`
+   一致，所以臂身会跟着仿真动，手指不会单独动。要完整的 22 连杆手（配合
+   `robot_state_publisher` / MoveIt，或以后把手指也发成 TF）用
+   `--hand articulated`。腕部转接件（`tools/make_wrist_flange.py`）和臂、手来自同一个
+   MuJoCo 模型，所以也在导出的 URDF 里，rviz 里腕部是连续的、不会有缺口。
 
 一条命令自查：
 
@@ -317,7 +350,7 @@ ros2 node list && ros2 topic hz /tf &   # Ctrl-C 退出
 ros2 topic info /pro7_pick_place/markers --verbose | grep -i node
 ```
 
-- 该项目本身「夹持偏临界」：`grasp_common.pick_and_place` 目前对具体落点敏感，
+- 该项目本身「夹持偏临界」：`grasp.common.pick_and_place` 目前对具体落点敏感，
   实测 seed 0~4 只有 seed 1 能完整放置（`tests/test_grasp.py` 里用 xfail 记录了这一点）。
   节点只是忠实地把专家的结果（含失败原因）报出来，不做额外补偿；
   同一 seed 的结果是可复现的。

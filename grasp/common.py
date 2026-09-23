@@ -3,7 +3,7 @@
 The workbench height, cube size, start pose and grasp geometry are used by the
 MuJoCo XML, the Gymnasium environment, the demo/montage scripts and the live
 viewers.  The end effector is the LinkerHand L20 dexterous hand (see
-``convert_hand_urdf.py``); its 21 joints are driven as a single open/close
+``tools/convert_hand_urdf.py``); its 21 joints are driven as a single open/close
 synergy so the action space stays "7 arm torques + 1 grip command".  Keeping
 them here means tuning the scene is a one-line change instead of a hunt for
 scattered magic numbers.
@@ -15,8 +15,8 @@ policy) has to pick the red one out of a cluttered bench.  A second bench
 (``TABLE_2_POS``) with a flat drop-off pad (``PLACE_TARGET``) sits on the other
 side of the base, so the same scene drives both "grasp" and "pick & place".
 
-The resolved-rate *expert* lives here as well, so ``grasp_demo`` (scripted),
-``supervised_grasp`` (DAgger teacher) and ``make_grasp_montage`` all drive the
+The resolved-rate *expert* lives here as well, so :mod:`grasp.demo` (scripted),
+:mod:`grasp.supervised` (DAgger teacher) and :mod:`grasp.montage` all drive the
 arm with exactly the same control law.
 """
 
@@ -29,13 +29,13 @@ from typing import Optional
 import mujoco
 import numpy as np
 
-from detect_red_cube import DEFAULT_CUBE_SIDE, estimate_cube_world_rgbd, render_rgbd
+from grasp.detect import DEFAULT_CUBE_SIDE, estimate_cube_world_rgbd, render_rgbd
 from paths import asset_path
 
 # --------------------------------------------------------------------------- #
 # scene geometry
 # --------------------------------------------------------------------------- #
-#: The grasp scene is the real-URDF-mesh Pro7 (see README: real vs. capsule).
+#: The grasp scene is the real-URDF-mesh Pro7.
 MODEL_PATH = asset_path("rokae_xmate_pro7_pick_real.xml")
 
 TABLE_Z = 0.45  # workbench top (m)
@@ -64,7 +64,7 @@ START_POSE = np.array([0.0, -0.3, 0.0, 1.65, 0.0, 0.9, 0.0])
 N_ARM = 7  # actuated arm joints; the 8th actuator is the gripper
 
 # --------------------------------------------------------------------------- #
-# dexterous hand (LinkerHand L20, see convert_hand_urdf.py)
+# dexterous hand (LinkerHand L20, see tools/convert_hand_urdf.py)
 # --------------------------------------------------------------------------- #
 #: ``open`` / ``close`` joint presets and the finger -> contact-geom grouping,
 #: all generated from the vendor URDF alongside the model fragments.
@@ -674,7 +674,7 @@ def iter_pick_and_place(
     :func:`pick_and_place` wraps.
 
     ``place=False`` stops after the pinch (the plain grasp task of
-    ``grasp_demo``): the cube is held and the episode ends with
+    :mod:`grasp.demo`): the cube is held and the episode ends with
     ``placed=False`` / ``reason='grasped'``.
 
     ``place_target`` overrides :data:`PLACE_TARGET` (the drop-off point); the

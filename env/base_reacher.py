@@ -10,9 +10,9 @@ A "reacher" in this project is always the same task:
 * reward  = ``-dist - ctrl_cost * ||ctrl||^2 - vel_cost * ||qvel||^2
   + shaping(dist) + success_reward`` on a hit.
 
-Implementing that once is what keeps the 2-, 3-, 6- and 7-DOF variants from
-drifting apart: a subclass only picks the model, the tip site and how the start
-pose and target are sampled.
+Implementing that once is what keeps the mesh models from drifting apart: a
+subclass only picks the model, the tip site and how the start pose and target
+are sampled.
 """
 
 from __future__ import annotations
@@ -34,13 +34,8 @@ class BaseReacher(gym.Env):
     TIP_SITE: str = "tip"
     #: Camera used by :meth:`render`.
     CAMERA: str = "cam_iso"
-    #: 2 for the planar arm, 3 for every spatial arm.
+    #: Target / end-effector dimensionality (every current model is spatial).
     POS_DIM: int = 3
-    #: Joint angles enter the observation as ``cos``/``sin``.  Almost every model
-    #: uses a block layout ``[cos q..., sin q...]``; the planar arm historically
-    #: used an interleaved one ``[cos q1, sin q1, cos q2, sin q2]``.  The flag
-    #: exists so that its trained checkpoints keep loading unchanged.
-    INTERLEAVED_ANGLES: bool = False
 
     DEFAULT_MAX_STEPS: int = 120
     DEFAULT_TARGET_RADIUS: float = 0.08
@@ -184,9 +179,7 @@ class BaseReacher(gym.Env):
         ).astype(np.float32)
 
     def _angle_obs(self, q: np.ndarray) -> np.ndarray:
-        """``cos``/``sin`` joint features in the layout the model was trained on."""
-        if self.INTERLEAVED_ANGLES:
-            return np.column_stack([np.cos(q), np.sin(q)]).ravel()
+        """``cos``/``sin`` joint features, block layout ``[cos q..., sin q...]``."""
         return np.concatenate([np.cos(q), np.sin(q)])
 
     def _compute_reward(self):

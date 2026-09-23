@@ -4,7 +4,8 @@ Started by default:
 
 * ``pick_place_node`` -- the node itself (topics, ``reset`` service, ``pick_place``
   action),
-* ``rviz2`` with ``config/pick_place.rviz`` -- TF tree, markers and the
+* ``rviz2`` with ``config/pick_place.rviz`` -- the robot model (from the URDF
+  the node latches on ``/robot_description``), the TF tree, markers and the
   eye-in-hand image (turn it off with ``rviz:=false`` on a headless machine).
 
 Optionally:

@@ -10,6 +10,9 @@ Topics (private names, i.e. ``/pro7_pick_place/...``)
     ``camera/color/camera_info`` / ``camera/depth/camera_info``
     ``markers``        visualization_msgs/MarkerArray -- pad, cube, sub-goal
     ``/tf``            tf2_msgs/TFMessage -- world -> base -> link1..7 -> tool0
+    ``/robot_description``  std_msgs/String -- URDF of the arm + hand, latched so
+                       an rviz RobotModel display can draw the real geometry
+                       (see :mod:`pro7_pick_place_ros.robot_description`)
 
 Services
     ``reset``          pro7_pick_place_interfaces/ResetScene -- rebuild the cell
@@ -25,6 +28,7 @@ vision pipeline and scripted expert (see :mod:`pro7_pick_place_ros.scene` and
 from __future__ import annotations
 
 import math
+import os
 import time
 from typing import Optional, Tuple
 
@@ -34,11 +38,16 @@ from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import (
+    DurabilityPolicy,
+    QoSProfile,
+    ReliabilityPolicy,
+    qos_profile_sensor_data,
+)
 
 from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion, TransformStamped, Vector3
 from sensor_msgs.msg import CameraInfo, Image, JointState
-from std_msgs.msg import ColorRGBA, Header
+from std_msgs.msg import ColorRGBA, Header, String
 from tf2_msgs.msg import TFMessage
 from visualization_msgs.msg import Marker, MarkerArray
 
@@ -47,6 +56,7 @@ from pro7_pick_place_interfaces.msg import PickPlaceStatus
 from pro7_pick_place_interfaces.srv import ResetScene
 
 from . import project
+from . import robot_description
 from .scene import CAMERA_OPTICAL_FRAME, WORLD_FRAME, GraspScene
 from .simulator import PickPlaceRequest, PickPlaceSimulator
 
@@ -163,6 +173,26 @@ class PickPlaceNode(Node):
         )
         self.tf_pub = self.create_publisher(TFMessage, "/tf", 100)
 
+        # ---- robot description (what rviz's RobotModel draws) -----------
+        # A URDF never changes, so it is published *transient local* -- the ROS 2
+        # "latched": an rviz that starts after the node still gets it.  The
+        # shipped layout asks for exactly that durability; volatile subscribers
+        # (rviz's default) are served by the low-rate republish below.
+        self.declare_parameter("urdf_path", "")
+        self.robot_desc_pub = self.create_publisher(
+            String,
+            "/robot_description",
+            QoSProfile(
+                depth=1,
+                durability=DurabilityPolicy.TRANSIENT_LOCAL,
+                reliability=ReliabilityPolicy.RELIABLE,
+            ),
+        )
+        self._robot_description = self._load_robot_description()
+        self._served_subscribers = 0
+        if self._robot_description is not None:
+            self.robot_desc_pub.publish(String(data=self._robot_description))
+
         # ---- services / action ------------------------------------------
         self.reset_srv = self.create_service(
             ResetScene, "~/reset", self._on_reset, callback_group=self._cb_group
@@ -182,6 +212,7 @@ class PickPlaceNode(Node):
         image_hz = max(0.1, float(self.get_parameter("image_hz").value))
         self._status_timer = self.create_timer(1.0 / status_hz, self._publish_state)
         self._vision_timer = self.create_timer(1.0 / image_hz, self._publish_vision)
+        self._robot_desc_timer = self.create_timer(2.0, self._serve_robot_description)
 
         self._shut_down = False
         if not self.sim.start():
@@ -197,6 +228,49 @@ class PickPlaceNode(Node):
     # ------------------------------------------------------------------ #
     # publishing
     # ------------------------------------------------------------------ #
+    def _load_robot_description(self) -> Optional[str]:
+        """URDF text for rviz, or ``None`` (with a logged reason) if unreadable."""
+        path = robot_description.path_for(
+            self.scene.model_path_used,
+            str(self.get_parameter("urdf_path").value or ""),
+        )
+        try:
+            text, notes = robot_description.read(
+                path, os.path.join(self.project_root, "assets")
+            )
+        except OSError as exc:
+            self.get_logger().warn(
+                f"no robot description at {path} ({exc.strerror}); rviz's "
+                f"RobotModel will stay empty -- generate it with: python3 "
+                f"{os.path.join(self.project_root, 'tools', 'convert_arm_urdf.py')}"
+            )
+            return None
+        for note in notes:
+            self.get_logger().warn(f"robot description: {note}")
+        links, joints = robot_description.counts(text)
+        self.get_logger().info(
+            f"robot description: {path} ({links} links, {joints} joints) "
+            "-> /robot_description"
+        )
+        return text
+
+    def _serve_robot_description(self) -> None:
+        """Re-send the URDF when a new subscriber shows up.
+
+        The transient-local publish covers late joiners that ask for it (the
+        shipped rviz layout does); this covers a subscriber on volatile QoS,
+        which is rviz's default.  It deliberately fires only when the subscriber
+        count *grows*: rviz rebuilds its whole RobotModel on every message, so
+        republishing on a timer would re-parse the meshes twice a second.
+        """
+        if self._robot_description is None:
+            return
+        served = self.robot_desc_pub.get_subscription_count()
+        if served <= self._served_subscribers:
+            return
+        self._served_subscribers = served
+        self.robot_desc_pub.publish(String(data=self._robot_description))
+
     def _frame_id(self, name: str) -> str:
         """Frame id with the optional ``tf_prefix``.
 

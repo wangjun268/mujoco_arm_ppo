@@ -1,6 +1,12 @@
 # rviz2 layout of the Pro7 pick & place cell.
 #   ros2 run rviz2 rviz2 -d $(ros2 pkg prefix pro7_pick_place_ros)/share/pro7_pick_place_ros/config/pick_place.rviz
 # Fixed frame is "world" (add tf_prefix:=sim/ to the node and change it here accordingly).
+#
+# The RobotModel display draws the arm + hand from the URDF the node latches on
+# /robot_description (see tools/convert_arm_urdf.py).  Its Description Topic therefore
+# asks for Transient Local durability: rviz usually starts *after* the node, and
+# the URDF is published once.  If you run with tf_prefix:=sim/, set this
+# display's "TF Prefix" to the same prefix, or it will not find the links.
 Panels:
   - Class: rviz_common/Displays
     Help Height: 78
@@ -49,6 +55,22 @@ Visualization Manager:
       Show Names: true
       Update Interval: 0
       Value: true
+    - Class: rviz_default_plugins/RobotModel
+      Collision Enabled: false
+      Description File: ""
+      Description Source: Topic
+      Description Topic:
+        Depth: 5
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /robot_description
+      Enabled: true
+      Name: RobotModel
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
     - Class: rviz_default_plugins/MarkerArray
       Enabled: true
       Name: PickPlace

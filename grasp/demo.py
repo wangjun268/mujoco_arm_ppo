@@ -3,28 +3,34 @@
 Pipeline
 --------
 1. A red cube sits on a workbench in the MuJoCo scene built by
-   :mod:`grasp_common` around the Rokae xMate Pro7 7-DOF arm with an
+   :mod:`grasp.common` around the Rokae xMate Pro7 7-DOF arm with an
    eye-in-hand gripper + RGB-D camera.
-2. ``detect_red_cube`` segments the red blob and back-projects its depth to
+2. :mod:`grasp.detect` segments the red blob and back-projects its depth to
    estimate the cube's world (x, y, z).
-3. The resolved-rate expert from :mod:`grasp_common` servos the gripper centre
+3. The resolved-rate expert from :mod:`grasp.common` servos the gripper centre
    onto that point, then closes the pinch gripper.
 
 Run::
 
-    python3 grasp_demo.py                     # 5 random cubes, no video
-    python3 grasp_demo.py --episodes 8 --video
+    python3 grasp/demo.py                     # 5 random cubes, no video
+    python3 grasp/demo.py --episodes 8 --video
 """
 
 from __future__ import annotations
 
 import argparse
+import os
+import sys
 
 import imageio.v2 as imageio
 import mujoco
 import numpy as np
 
-from grasp_common import (
+# Allow `python3 grasp/demo.py` as well as `python3 -m grasp.demo`.
+if __package__ in (None, ""):
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from grasp.common import (
     GRIP_CTRL_CLOSED,
     GRIP_CTRL_OPEN,
     cube_world,

@@ -12,7 +12,7 @@ right/meshes/*.STL                # 22 STL parts, unchanged
 ## Generated files — do not edit by hand
 
 MuJoCo merges a URDF's root link into the *world* body, so the vendor URDF cannot be bolted onto
-the Pro7 wrist directly.  `convert_hand_urdf.py` (repository root) re-emits the same kinematics as
+the Pro7 wrist directly.  `tools/convert_hand_urdf.py` (in the checkout's `tools/`) re-emits the same kinematics as
 MJCF fragments the arm scenes `<include>`, and calibrates the grasp by simulating it:
 
 ```
@@ -26,7 +26,7 @@ linkerhand_l20_right.xml            # standalone model, for eyeballing the hand 
 Regenerate everything with:
 
 ```bash
-python3 convert_hand_urdf.py
+python3 tools/convert_hand_urdf.py
 ```
 
 ## Kinematics

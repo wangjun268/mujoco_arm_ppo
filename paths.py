@@ -4,6 +4,11 @@ Every entry point locates the repository, the MuJoCo assets and the generated
 results through this module.  Nothing else in the project should hard-code an
 absolute path, so the checkout can be moved or renamed (and the scripts run
 from any working directory) without editing a single line of logic.
+
+This file therefore stays at the checkout root: ``PROJECT_ROOT`` *is* the
+directory holding it, which is also how ``ros2_ws`` finds the project and how
+``grasp/`` and ``tools/`` scripts (run as plain scripts) get the root on
+``sys.path``.
 """
 
 from __future__ import annotations
@@ -19,7 +24,7 @@ ASSETS_DIR = os.path.join(PROJECT_ROOT, "assets")
 RESULTS_DIR = os.path.join(PROJECT_ROOT, "results")
 
 #: Environment used when a script is called without ``--env``.
-DEFAULT_ENV = "two_joint"
+DEFAULT_ENV = "pro7_urdf"
 
 
 def asset_path(name: str) -> str:
@@ -64,8 +69,8 @@ def resolve_model(model_path: str) -> str:
     if os.path.isdir(p):
         sys.exit(
             f"ERROR: the model path is a directory, not a model file: {p!r}\n"
-            f"       Pass a model name, e.g.  --model results/ppo_two_joint\n"
-            f"       (or the full file results/ppo_two_joint.zip)."
+            f"       Pass a model name, e.g.  --model results/ppo_pro7_urdf\n"
+            f"       (or the full file results/ppo_pro7_urdf.zip)."
         )
     zp = p if p.endswith(".zip") else p + ".zip"
     if not os.path.isfile(zp):

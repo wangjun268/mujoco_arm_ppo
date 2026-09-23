@@ -1,12 +1,14 @@
-"""Gymnasium environments: Rokae xMate arms reach a 3D target.
+"""Gymnasium environment: Rokae xMate Pro7 7-DOF arm reaches a 3D target.
 
 The target is sampled from the reachable workspace: a random joint pose is
 forward-kinematic-ed to get its tool-tip position (plus a little noise), so any
 target is guaranteed reachable.  The tool tip is deliberately off the last roll
 axis so that *every* joint affects the tip position.
 
-The DOF, joint ranges and tool site are read straight out of the MuJoCo model,
-so the same class drives both the 6-DOF ER3 and the 7-DOF Pro7 arms.
+The arm uses the **real URDF geometry**: ``rokae_xmate_pro7_real.xml`` draws the
+links with the official Pro7 STL meshes.  The DOF, joint ranges and tool site are
+read straight out of the MuJoCo model, so another mesh model only has to override
+``MODEL_PATH``.
 """
 
 from __future__ import annotations
@@ -21,26 +23,28 @@ from paths import asset_path
 from .base_reacher import BaseReacher
 
 
-class RokaeReacher(BaseReacher):
-    """Generic Rokae arm reacher; override ``MODEL_PATH`` for another model."""
+class RokaePro7RealReacher(BaseReacher):
+    """Rokae xMate Pro7 7-DOF reacher using the real URDF STL meshes."""
 
-    MODEL_PATH = asset_path("rokae_xmate_er3.xml")
+    MODEL_PATH = asset_path("rokae_xmate_pro7_real.xml")
     TIP_SITE = "tool"
     CAMERA = "cam_iso"
     POS_DIM = 3
-    DEFAULT_MAX_STEPS = 200
-    DEFAULT_TARGET_RADIUS = 0.12
+    # The Pro7 reach is ~1.4 m, so the start-target distance is kept short and
+    # the success radius slightly loose to keep the 7-DOF task learnable.
+    DEFAULT_MAX_STEPS = 250
+    DEFAULT_TARGET_RADIUS = 0.15
 
     #: Spread of the start pose / target pose around a random "anchor" pose.
-    START_STD = 0.15
-    TARGET_STD = 0.35
+    START_STD = 0.10
+    TARGET_STD = 0.24
     #: Anchor poses are drawn from this fraction of each joint's range.
     CENTER_SCALE = 0.45
     #: Uniform noise added to the FK-derived target tip (m).
     TARGET_JITTER = 0.03
     #: Smooth closeness shaping: ``SHAPING_SCALE * exp(-dist / SHAPING_LENGTH)``.
     #: Keeps the gradient alive far from the target, which is what makes the
-    #: 6-/7-DOF reaches learnable at all.
+    #: 7-DOF reach learnable at all.
     SHAPING_SCALE = 0.5
     SHAPING_LENGTH = 0.3
 
@@ -91,25 +95,3 @@ class RokaeReacher(BaseReacher):
         q = center + self.np_random.normal(0.0, std, size=self.n_dof)
         lo, hi = self._limits[:, 0], self._limits[:, 1]
         return np.clip(q, lo, hi)
-
-
-class RokaePro7Reacher(RokaeReacher):
-    """Rokae xMate Pro7 7-DOF arm reacher."""
-
-    MODEL_PATH = asset_path("rokae_xmate_pro7.xml")
-    # The Pro7 reach is ~1.4 m (much longer than the ER3), so give the agent a
-    # shorter start-target distance and a slightly looser success radius.
-    START_STD = 0.10
-    TARGET_STD = 0.24
-    DEFAULT_MAX_STEPS = 250
-    DEFAULT_TARGET_RADIUS = 0.15
-
-
-class RokaePro7RealReacher(RokaeReacher):
-    """Rokae xMate Pro7 7-DOF reacher using the *real* URDF STL meshes."""
-
-    MODEL_PATH = asset_path("rokae_xmate_pro7_real.xml")
-    START_STD = 0.10
-    TARGET_STD = 0.24
-    DEFAULT_MAX_STEPS = 250
-    DEFAULT_TARGET_RADIUS = 0.15

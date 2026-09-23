@@ -2,8 +2,8 @@
 
 The scene (real URDF STL meshes, workbench, red cube, coloured distractors,
 eye-in-hand RGB-D camera, LinkerHand L20 dexterous hand) is the one defined by
-:mod:`grasp_common`, which also supplies the scene constants and the "is it
-grasped" test.  ``detect_red_cube`` turns the camera image into a 3D cube
+:mod:`grasp.common`, which also supplies the scene constants and the "is it
+grasped" test.  :mod:`grasp.detect` turns the camera image into a 3D cube
 position, so the observation is *vision-driven*: 7 arm torques + 1 grip command
 are the actions -- the 21 hand joints close as one synergy -- and the reward
 pushes the hand's grasp centre onto the cube and awards a large bonus once
@@ -22,7 +22,7 @@ import mujoco
 import numpy as np
 from gymnasium import spaces
 
-import grasp_common as gc
+import grasp.common as gc
 
 
 class RokaePro7Pick(gym.Env):

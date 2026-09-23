@@ -1,12 +1,19 @@
 # 项目架构与逐文件说明
 
-> 用 **MuJoCo** 做物理仿真、**Gymnasium** 定义强化学习环境、**Stable-Baselines3 PPO** 训练，让机械臂末端达到随机目标点。当前共 7 个环境：平面二连杆（2D）、三自由度空间臂（3D）、**珞石 xMate ER3 六自由度臂**、**xMate Pro7 七自由度臂**（胶囊体版 / 真实 STL 网格版）、以及 Pro7 的**视觉抓取**场景（胶囊体版 / 真实网格版）。
+> 用 **MuJoCo** 做物理仿真、**Gymnasium** 定义强化学习环境、**Stable-Baselines3 PPO** 训练，让 **珞石 xMate Pro7 七自由度臂**的末端达到随机目标点，并在同一套真实网格场景上完成视觉抓取与整段取放。当前注册 4 个环境名（`pro7_urdf` 到达、`pro7_pick` / `pro7_pick_urdf` 抓取、`pro7_pick_place` 取放），**全部使用官方 URDF STL 网格，没有任何胶囊体基元模型**。
 
 > **末端执行器更新**：抓取场景的平行两指夹爪已替换为**灵心巧手 LinkerHand L20**（厂商 URDF +
-> 22 个 STL 见 `assets/linkerhand_l20/`，由根目录 `convert_hand_urdf.py` 生成 MuJoCo 片段并标定
-> 抓取姿态）。L20 的 21 个关节按开合协同驱动，`grasp_common.scene_ids()` 提供 `hand_*` 标识，
+> 22 个 STL 见 `assets/linkerhand_l20/`，由 `tools/convert_hand_urdf.py` 生成 MuJoCo 片段并标定
+> 抓取姿态）。L20 的 21 个关节按开合协同驱动，`grasp.common.scene_ids()` 提供 `hand_*` 标识，
 > `is_grasped()` 改为"至少 N 根手指接触方块"。下文中"夹爪 / 两指 / 钳口"的描述属于更换前的
 > 历史实现。
+
+> **腕部转接件**：手装在腕部法兰前方 60 mm（真实转接件的位置），中间原来是空的，臂和手在
+> MuJoCo / rviz 里看着是断开的。现在由 `tools/make_wrist_flange.py` 生成回转体转接件
+> `assets/meshes/pro7_l20_flange.stl`，抓取/取放场景（`rokae_xmate_pro7_pick_real.xml`）与
+> **真实网格版到达训练模型**（`rokae_xmate_pro7_real.xml`，`pro7_urdf`）都以**纯视觉、零质量**
+> 的 geom 挂上（`contype=0` / `density=0`）。400 步随机控制下 qpos 与加之前
+> **逐位相同**，手眼相机画面 76800 像素零差异：标定、训练好的策略、rollout 都不受影响。
 
 ---
 
@@ -19,22 +26,21 @@
 3. 用 PPO 学一个策略，让末端在尽可能少的步数内到达随机目标。
 4. 提供离线评估（指标 + 学习曲线 + 视频）和在线可视化（MuJoCo 实况窗口）。
 
-三个环境共享同一套训练/评估/可视化流程，通过 `--env` 参数切换。
+全部环境共享同一套训练/评估/可视化流程，通过 `--env` 参数切换。
 
 ---
 
 ## 2. 总体架构（数据流）
 
 ```text
- ① 物理模型（XML）                    ① 物理模型（XML）
-  assets/two_joint_arm.xml            assets/three_joint_arm.xml
-  assets/rokae_xmate_er3.xml
-         │                                      │
-         │ mujoco.MjModel.from_xml_path()       │
-         ▼                                      ▼
+ ① 物理模型（XML，全部为真实 STL 网格）
+  assets/rokae_xmate_pro7_real.xml        assets/rokae_xmate_pro7_pick_real.xml
+         │                                         │
+         │ mujoco.MjModel.from_xml_path()          │
+         ▼                                         ▼
 ② 任务封装（Gymnasium.Env）
- env/two_joint_reacher.py            env/three_joint_reacher.py
- env/rokae_reacher.py
+ env/rokae_reacher.py                    env/rokae_pro7_pick.py
+                                         env/rokae_pro7_pick_place.py
          │       ② 工厂/注册表
          │       env/__init__.py  →  make_env(name)
          ▼
@@ -43,8 +49,7 @@
                             │
                             ├──► eval_rollout.py  指标 + learning_curve.png + rollout.mp4/gif
                             ├──► viewer_demo.py   实时 MuJoCo 窗口
-                            ├──► make_montage.py  逼近→命中 静态拼图
-                            └──► ik_probe*.py     解析 IK + PD 可行性基线（对比参照）
+                            └──► make_montage.py  逼近→命中 静态拼图
 ```
 
 等价地，分层如下：
@@ -53,13 +58,13 @@
 |---|---|---|
 | **物理层** | `assets/*.xml` | 定义刚体、关节、几何、驱动、传感器、相机、灯光、目标 |
 | **环境基类** | `env/base_reacher.py` | 所有「到达」任务共享的观测/动作/奖励/渲染实现（只写一遍） |
-| **环境层** | `env/*_reacher.py`、`env/rokae_pro7_pick.py` | 各自只定义模型、末端 site、起点/目标采样与抓取逻辑 |
+| **环境层** | `env/rokae_reacher.py`、`env/rokae_pro7_pick.py`、`env/rokae_pro7_pick_place.py` | 各自只定义模型、末端 site、起点/目标采样与抓取逻辑 |
 | **工厂层** | `env/__init__.py` | 环境注册表与 `make_env()`，供所有脚本按名字取环境 |
 | **RL 层** | `train_ppo.py` | PPO 策略网络、向量化环境、回调统计、断点续训 |
 | **评估/可视化层** | `eval_rollout.py`、`viewer_demo.py`、`make_montage.py` | 加载策略做指标、视频、窗口、拼图 |
-| **基准层** | `ik_probe*.py` | 手写解析逆运动学 + PD 力控，当作“人类最优”参照 |
-| **抓取层** | `grasp_common.py`、`grasp_policy.py`、`detect_red_cube.py` | 抓取场景常量、专家伺服、视觉定位、策略网络（训练与回放共用） |
-| **工具层** | `paths.py`、`cli.py` | 路径/默认值集中管理、统一的 `--env/--model/--out` 命令行与策略加载 |
+| **抓取层** | `grasp/`（`common.py`、`detect.py`、`policy.py` + 演示/训练/可视化脚本） | 抓取场景常量、专家伺服、视觉定位、策略网络（训练与回放共用） |
+| **共享模块层** | `paths.py`、`cli.py`、`live_viewer.py` | 路径/默认值集中管理、统一的 `--env/--model/--out` 命令行与策略加载、节流实时窗口 |
+| **模型工具层** | `tools/`（`build_dual_arm_model.py`、`convert_*_urdf.py`、`make_wrist_flange.py`、`urdf_selfcheck.py`） | 从厂商 URDF / 清洗描述重新生成 `assets/` 下的 MJCF、URDF、STL |
 | **测试层** | `tests/` | pytest 冒烟 + 回归测试（观测维度/顺序、路径、抓取契约） |
 | **文档/产物层** | `README.md`、`PROJECT_GUIDE.md`、`results/` | 快速上手、本说明、训练产物 |
 
@@ -67,48 +72,75 @@
 
 ## 3. 目录结构
 
+根目录只留 **3 个共享模块 + 4 个入口脚本**，其余按职责进包：
+
+- `paths.py` / `cli.py` / `live_viewer.py`：所有脚本都要用的共享模块（`paths.py` 是仓库根的
+  **唯一锚点**，路径全部由它算出来，ROS 节点也靠它找仓库）。
+- `train_ppo.py` / `eval_rollout.py` / `viewer_demo.py` / `make_montage.py`：到达（reach）主流程的
+  四个入口，最常用，留在根目录保持 `python3 train_ppo.py ...` 的手感。
+- `grasp/`：抓取层整条链路（场景、视觉、策略、演示、训练、可视化）。
+- `tools/`：模型工具层，把 `assets/` 里的资产从厂商/清洗描述重新生成出来。
+- `env/`、`tests/`、`ros2_ws/`、`results/`：环境包、测试、ROS 2 封装、训练产物。
+
+每个脚本**两种跑法都支持**：`python3 grasp/demo.py`（脚本）和 `python3 -m grasp.demo`（模块）；
+`tools/*` 同理。包内文件用 `from grasp.common import ...` 这种绝对导入，入口脚本自己在开头把
+仓库根放上 `sys.path`（`if __package__ in (None, ""): ...`），所以从任意工作目录执行都不会找不到模块。
+
 ```text
 mujoco_arm_ppo/
 ├── README.md                 # 快速上手：安装/训练/评估/查看器
 ├── PROJECT_GUIDE.md          # 本文档：架构 + 逐文件说明
 ├── PROJECT_SUMMARY.md        # 当前状态/结果/产物汇总
 ├── requirements.txt          # 依赖清单（mujoco / sb3 / torch / ...）
-├── paths.py                  # 项目路径、workspace 默认值、模型路径校验
+├── setup.cfg                 # flake8 + pytest 配置
+├── start.sh                  # ROS 2 一键启动（构建 + 起节点 + rviz2）
+├── pro7_pick_place.desktop   # 同上，双击版
+│
+│   —— 共享模块（全项目都从这里取路径 / 命令行 / 窗口）——
+├── paths.py                  # 项目路径、workspace 默认值、模型路径校验（仓库根锚点）
 ├── cli.py                    # 统一 --env/--model/--out 命令行与策略加载
 ├── live_viewer.py            # 节流的原生 MuJoCo 实时窗口（训练/演示共用）
+│
+│   —— 到达（reach）入口脚本 ——
 ├── train_ppo.py              # PPO 训练入口
 ├── eval_rollout.py           # 评估 + 学习曲线 + 演示视频
 ├── viewer_demo.py            # 实时 MuJoCo 可视化窗口
 ├── make_montage.py           # 逼近→命中 静态拼图
-├── ik_probe.py               # 二连杆解析 IK + PD 基线
-├── ik_probe3d.py             # 三自由度(3R)解析 IK + PD 基线
-├── grasp_common.py           # 抓取场景常量 + 专家伺服（唯一来源）
-├── grasp_policy.py           # 抓取策略网络（训练/回放共用）
-├── detect_red_cube.py        # 红色分割 + 深度反投影 → 红块 3D 坐标
-├── grasp_demo.py             # 检测 → 定位 → 伺服 → 抓取
-├── pick_place_demo.py        # 源台抓取 → 提起 → 搬运 → 放到目标台放置垫
-├── supervised_grasp.py       # 在线 DAgger / 行为克隆训练
-├── train_live.py             # 取放训练过程可视化 GIF（默认 --task pick_place）
-├── detect_overlay.py         # 检测可视化（分割 + 3D 对比）
-├── visualize_grasp.py        # 抓取回放 GIF
-├── view_pick.py              # 抓取/取放实时窗口（--task grasp|pick_place）
-├── make_grasp_montage.py     # 逼近→抓住 拼图
-├── convert_hand_urdf.py      # 厂商 L20 URDF → MuJoCo 片段（含抓取标定）
-├── assets/
-│   ├── two_joint_arm.xml     # 平面二连杆模型
-│   ├── three_joint_arm.xml   # 3 自由度空间机械臂模型
-│   ├── rokae_xmate_er3.xml   # 珞石 xMate ER3 六自由度臂（真实几何）
-│   ├── rokae_xmate_pro7*.xml # Pro7 七自由度臂 / 抓取场景（含真实网格版）
-│   ├── meshes/xMatePro7/*.stl # 官方 Pro7 STL 网格（随仓库提供，相对路径引用）
-│   └── linkerhand_l20/       # 厂商 L20 URDF/STL + 生成的 MuJoCo 片段
-├── env/                      # Python 包（仓库根目录在 sys.path 上即可导入）
+│
+├── env/                      # 环境包（Gymnasium）
 │   ├── __init__.py           # make_env 注册表
 │   ├── base_reacher.py       # 到达任务基类（观测/动作/奖励/渲染唯一实现）
-│   ├── two_joint_reacher.py  # 二维到达任务环境（子类）
-│   ├── three_joint_reacher.py# 三维到达任务环境（子类）
-│   ├── rokae_reacher.py      # 珞石 ER3 / Pro7 到达环境（子类）
+│   ├── rokae_reacher.py      # Pro7 真实网格到达环境（子类）
 │   ├── rokae_pro7_pick.py    # Pro7 视觉抓取环境（obs 30）
-│   └── rokae_pro7_pick_place.py # Pro7 取放整段环境（obs 38）
+│   ├── rokae_pro7_pick_place.py # Pro7 取放整段环境（obs 38）
+│   └── dual_arm_reacher.py   # 双臂到达 + 双臂协作（bar）任务（obs 60, act 14）
+├── grasp/                    # 抓取层：相机 + L20 手 + 红块整条链路
+│   ├── __init__.py           # 包说明（故意不 import 子模块，保持 `import grasp` 轻量）
+│   ├── common.py             # 抓取场景常量 + 干扰块 + 专家伺服（唯一来源）
+│   ├── detect.py             # 红色分割 + 深度反投影 → 红块 3D 坐标
+│   ├── policy.py             # 抓取策略网络（训练/回放共用）
+│   ├── demo.py               # 检测 → 定位 → 伺服 → 抓取
+│   ├── pick_place_demo.py    # 源台抓取 → 提起 → 搬运 → 放到目标台放置垫
+│   ├── montage.py            # 逼近→抓住 拼图
+│   ├── overlay.py            # 检测可视化（分割 + 3D 对比）
+│   ├── visualize.py          # 抓取回放 GIF
+│   ├── view.py               # 抓取/取放实时窗口（--task grasp|pick_place）
+│   ├── supervised.py         # 在线 DAgger / 行为克隆训练
+│   └── train_live.py         # 取放训练过程可视化 GIF（默认 --task pick_place）
+├── tools/                    # 模型工具层：重新生成 assets/ 下的资产
+│   ├── __init__.py           # 包说明
+│   ├── build_dual_arm_model.py   # lkwy73_o1 双臂描述 → assets/dual_arm_reach.xml（+ 网格拷贝）
+│   ├── convert_hand_urdf.py      # 厂商 L20 URDF → MuJoCo 片段（含抓取标定）
+│   ├── convert_arm_urdf.py       # MuJoCo 抓取场景 → URDF（网格 + 惯量，给 rviz2 用）
+│   ├── urdf_selfcheck.py         # 把导出的 URDF 重新用 MuJoCo 加载，逐 geom / 质量对比（--check）
+│   └── make_wrist_flange.py      # Pro7 法兰 → L20 转接件（回转体 STL，补上 60 mm 间隙）
+├── assets/
+│   ├── rokae_xmate_pro7_real.xml      # Pro7 七自由度到达模型（真实 STL 网格）
+│   ├── rokae_xmate_pro7_pick_real.xml # Pro7 + L20 抓取/取放场景（真实 STL 网格）
+│   ├── dual_arm_reach.xml    # lkwy73_o1 双臂任务模型（14 电机 + 双侧 mocap 目标）
+│   ├── dual_arm/meshes/*.STL # 双臂降面网格（8.4 MB，单件 ≤ 20k 面）
+│   ├── meshes/xMatePro7/*.stl # 官方 Pro7 STL 网格（随仓库提供，相对路径引用）
+│   └── linkerhand_l20/       # 厂商 L20 URDF/STL + 生成的 MuJoCo 片段
 ├── tests/                    # pytest 冒烟 + 回归测试
 ├── ros2_ws/                  # ROS 2 封装（取放节点 + 客户端 + 接口包）
 │   └── src/
@@ -121,6 +153,31 @@ mujoco_arm_ppo/
     └── logs/<env>_<n>.txt    # 训练 stdout 日志（按环境/轮次命名）
 ```
 
+重组时文件只挪位置、不改逻辑，旧路径与新路径一一对应：
+
+| 旧路径（根目录扁平） | 新路径 |
+|---|---|
+| `grasp_common.py` | `grasp/common.py` |
+| `detect_red_cube.py` | `grasp/detect.py` |
+| `grasp_policy.py` | `grasp/policy.py` |
+| `grasp_demo.py` | `grasp/demo.py` |
+| `pick_place_demo.py` | `grasp/pick_place_demo.py` |
+| `make_grasp_montage.py` | `grasp/montage.py` |
+| `detect_overlay.py` | `grasp/overlay.py` |
+| `visualize_grasp.py` | `grasp/visualize.py` |
+| `view_pick.py` | `grasp/view.py` |
+| `supervised_grasp.py` | `grasp/supervised.py` |
+| `train_live.py` | `grasp/train_live.py` |
+| `build_dual_arm_model.py` | `tools/build_dual_arm_model.py` |
+| `convert_arm_urdf.py` | `tools/convert_arm_urdf.py` |
+| `convert_hand_urdf.py` | `tools/convert_hand_urdf.py` |
+| `make_wrist_flange.py` | `tools/make_wrist_flange.py` |
+| `urdf_selfcheck.py` | `tools/urdf_selfcheck.py` |
+
+只有两处内容跟着路径改了一行：`tools/convert_arm_urdf.py` 写进
+`assets/rokae_xmate_pro7_pick_real.urdf` 的生成器注释、`tools/convert_hand_urdf.py` 写进
+`assets/linkerhand_l20/linkerhand_l20_right.xml` 的同一句话（都是"由谁生成"的自述）。
+
 ---
 
 ## 4. 逐文件说明
@@ -132,54 +189,59 @@ mujoco_arm_ppo/
 > 路径写法相对 XML 所在目录 → 不再依赖项目外的 `/home/wj/rokae_ros2`，
 > 换机器/删掉外部仓库都能加载。改网格只需替换 `assets/meshes/` 下的文件。
 
-#### `assets/two_joint_arm.xml` —— 平面二连杆机械臂
+#### `assets/rokae_xmate_pro7_real.xml` —— Pro7 七自由度到达模型（真实 STL 网格）
 
-在 `xy` 平面内运动的两连杆臂，适合作为入门/验证任务。
+`pro7_urdf` 的模型：官方 Pro7 STL 网格 + 官方 URDF 的关节链、偏置与限位。
 
-- **关节**：`joint1`（肩，绕 `z` 轴 `hinge`）、`joint2`（肘，绕 `z` 轴 `hinge`）。两个关节轴都平行于世界 `z`，所以运动始终落在 `xy` 平面。
-- **几何**：两节 `capsule`（红色上臂、蓝色前臂），肩/肘处用 `sphere` 做关节外观。
-- **目标**：`target` 是 `mocap`（运动学控制）球体，`contype=0 / conaffinity=0` 表示**无碰撞、无质量**，从头到尾不会和手臂相撞。
-- **驱动**：两个 `motor`（力矩），`gear=6.0 / 4.0`，`ctrlrange=-1..1`（仿真里力矩 = 控制量 × gear）。
-- **传感器**：`jointpos / jointvel` 供观测使用。
-- **相机**：`cam_xy`（俯视 xy 平面），供渲染/窗口/拼图使用。
-- **地面**：`plane` 放在 `z=-0.12`，离肩/肘球体足够远。
-
-> ⚠️ 这里的“地面必须在臂下方且留间隙”是关键：肩/肘球体如果嵌入地面会形成把基座锁死的接触约束，导致肩关节完全动不了（早期踩过的坑）。
-
-#### `assets/three_joint_arm.xml` —— 3 自由度空间机械臂
-
-三杆链式臂：**基座偏航 + 肩俯仰 + 肘俯仰**，末端在 3D 空间内运动。
-
-- **关节**：`j1`（偏航，绕世界 `z`）、`j2`（肩俯仰，绕局部 `y`）、`j3`（肘俯仰，绕局部 `y`）。三关节组合出一个类球形的可达工作空间。
-- **重力**：`gravity="0 0 0"`（**零重力再到达**）。因为存在俯仰关节，有重力会显著增加难度；设为 0-g 让任务与二连杆一样是“纯惯性控制”，更易学习（观测/动作空间维度却高很多）。
-- **目标**：同样是 `mocap` 无碰撞球体。
-- **驱动**：3 个 `motor`，`gear=6.0 / 6.0 / 4.0`。
-- **相机**：`cam_iso`（等距视角）。它的 `xyaxes` 是“正视原点”的单位正交朝向——如果朝向偏了，渲染会是全黑画面。
-- **地面**：`plane` 但 `contype=0`，纯视觉，永远不与臂碰撞。
-
-> ⚠️ 两个关键坑：① 本模型 hinge 绕局部 `+y` 的转向与标准平面 IK 相反，解析 IK 需要把第二、三关节取反（`[q1,-q2,-q3]`）；② `cam_iso` 若未归一化/朝上偏会上调视锥导致黑屏。
-
-#### `assets/rokae_xmate_er3.xml` —— 珞石 xMate ER3 六自由度工业臂
-
-接近“真机”的模型：**关节轴、原点偏置、限位全部取自官方
-`RokaeRobot/rokae_ros2` 仓库 `rokae_description/urdf/xMateER3.urdf.xacro`
-的真实 URDF 参数**（几何原本在闭源 `libxMateModel.a` 里，本文件是它的开源复刻）。
-
-| 关节 | 轴 | 相对父连杆原点 z | 限位 (rad) |
+| 关节 | 轴 | 相对父连杆原点 z (m) | 限位 (rad) |
 |---|---|---|---|
-| 1 偏航 | (0,0,1) | 0 | ±2.967 |
-| 2 肩俯仰 | (0,1,0) | 0.404 | ±2.094 |
-| 3 肘俯仰 | (0,1,0) | 0.4375 | ±2.094 |
-| 4 腕偏航 | (0,0,1) | 0.4125 | ±2.967 |
-| 5 腕俯仰 | (0,1,0) | 0 | ±2.094 |
-| 6 腕滚转 | (0,0,1) | 0.2755 | ±6.283 |
+| 1 | (0,0,1) | 0 | ±3.0527 |
+| 2 | (0,1,0) | 0.404 | ±2.0933 |
+| 3 | (0,0,1) | 0.23743878 | ±3.0527 |
+| 4 | (0,1,0) | 0.15549959 | ±2.0933 |
+| 5 | (0,0,1) | 0.22044633 | ±3.0527 |
+| 6 | (0,1,0) | 0.14512568 | ±2.0933 |
+| 7 | (0,0,1) | 0.25090877 | ±6.2832 |
 
-- **六关节全驱动**：`gear = [8, 8, 6, 3, 3, 2]`，`ctrlrange=[-1,1]`。
-- **工具尖点偏离腕滚转轴**（局部 `(0, 0.10, 0.12)`）：这样 6 个关节都会影响
-  末端位置。否则第 4、6 轴只改变朝向、不移动位置，在纯位置到达任务里会变成
-  “无效自由度”、白给 PPO 增加噪声。
-- **零重力**：真实 xMate 重载且多为水平段，重力会让 6 轴难以用 PPO 学会；
-  设为 0-g 使其成为“0-g 到达”问题（与 3-DOF 一致），保证收敛。
+- **几何**：8 个官方 STL（`assets/meshes/xMatePro7/*.stl`），`scale=0.001`（URDF 以 mm 为单位）；所有连杆 geom 都是 `contype=0 / conaffinity=0`，到达任务里臂不与任何物体接触。
+- **驱动**：7 个 `motor`，`gear = [10, 10, 8, 6, 5, 4, 3]`，`ctrlrange=[-1,1]`。
+- **工具尖点**：`tool` site 在 `link7` 上位于局部 `(0, 0.06, 0)`，偏离腕滚转轴，因此 7 个关节都会移动末端（关节 1/3/5/7 约 3 mm、关节 4 约 31 mm、关节 6 约 13 mm、关节 2 约 50 mm @ 0.05 rad）。
+- **目标**：`target` 是 `mocap` 无碰撞球体，复位时放到由随机位姿正运动学(FK) 得到的可达点上。
+- **零重力**：`gravity="0 0 0"`，成为纯惯性控制问题，保证 PPO 可收敛。
+- **相机**：`cam_iso` 等距视角，供渲染/窗口/拼图使用。
+- **腕部转接件**：`wrist_flange` 引用 `assets/meshes/pro7_l20_flange.stl`，`density=0` + 无接触，纯视觉（见文首说明）。
+
+#### `assets/rokae_xmate_pro7_pick_real.xml` —— 抓取 / 取放场景（真实 STL 网格）
+
+`pro7_pick`（与别名 `pro7_pick_urdf`）和 `pro7_pick_place` 的模型，在同一个臂上装了整条操作链路：
+
+- **臂 + 手**：同一套 Pro7 网格；腕法兰前方 60 mm 处 `<include>` 灵心巧手 L20 的 MuJoCo 片段（`assets/linkerhand_l20/`），手指沿 +z 伸出、沿 +x 夹紧。
+- **工位**：源台 `table`（x>0）上放 5 cm 红块与绿/蓝/黄干扰块，目标台 `table2` 在 +y 侧、台面嵌 `place_pad` 放置垫标出落点。
+- **相机**：腕部 `cam_hand` 为 RGB-D 眼在手相机，用于红块检测；`cam_iso` 供整场景渲染。
+- **接触分组**：臂/手网格 `contype=0`，红块与干扰块用 `contype=4 / conaffinity=6`，只与 L20 手指和彼此碰撞，避免 34 处手指自接触（详见 `tools/convert_hand_urdf.py`）。
+
+#### `assets/dual_arm_reach.xml` —— lkwy73_o1 双臂任务模型（生成物）
+
+`dual_arm_reach` / `dual_arm_coop` 的模型。**不要手改**：由
+`tools/build_dual_arm_model.py` 从清洗过的双臂描述
+（`/home/wj/urdf/lkwy73_o1_dual_arm_clean`，原厂 URDF 的 41 links / 40 joints）
+生成，并把 29 个降面网格拷进 `assets/dual_arm/meshes/`（68.7 MB → 8.4 MB，
+单件最多 20000 面；原模型 `base_link` 有 274744 面，超过 MuJoCo 的 20 万面上限，
+直接用原 URDF 会加载失败）。
+
+| 项 | 值 |
+|---|---|
+| 自由度 | 36 个 hinge（双臂各 7 + 双手各 11），其中 14 个被驱动 |
+| 驱动 | 每臂 7 个 `motor`，`gear = [6,6,5,4,3,2,2] Nm`（单臂 4 kg，按 Pro7 比例缩小） |
+| 手部 | 22 个手指关节用 `<equality>` 钉在张开位（`polycoef="0 1 0 0 0"`），要控手就删掉该块并加执行器 |
+| 末端 | `tip_left` / `tip_right` 站点放在各自四指指尖中心（生成时用 FK 计算，偏差 0 mm） |
+| 目标 | 每臂一个 `mocap` 无碰撞球体，mocap 序号 = 臂序号 |
+| 自碰撞 | CAD 里 `L1↔base`(−7.1 mm)、`L5↔L7`(−11.2 mm) 及镜像对在任何位姿都重叠，已用 `<contact><exclude>` 排除；零位接触数 0 |
+| 其他 | `gravity="0 0 0"`、`timestep=0.02`、`integrator=Euler`，与 Pro7 到达模型同约定；总质量 11.11 kg 与原 URDF 一致 |
+
+镜像关系（左臂 → 右臂）符号为 `(-1,-1,-1,+1,-1,+1,-1)`：双臂沿 y 分列两侧，
+对称面是 y=0，绕轴 a 转 q 的镜像 = 绕 `(ax,-ay,az)` 转 −q。用网格点云核对过，
+正确符号残差约 3–5 mm（CAD 两件本身的不对称量），符号错误会跳到 75 mm 以上。
 
 ---
 
@@ -189,14 +251,12 @@ mujoco_arm_ppo/
 
 ```python
 _REGISTRY = {
-    "two_joint": TwoJointReacher,
-    "three_joint": ThreeJointReacher,
-    "six_joint": RokaeReacher,
-    "pro7_joint": RokaePro7Reacher,          # Pro7 7-DOF（胶囊体版）
     "pro7_urdf": RokaePro7RealReacher,       # Pro7 7-DOF（真实 URDF 网格）
-    "pro7_pick": RokaePro7Pick,              # Pro7 + 夹爪 + 相机 + 红块
-    "pro7_pick_urdf": RokaePro7PickReal,     # 同上，真实网格
+    "pro7_pick": RokaePro7Pick,              # Pro7 + L20 + 相机 + 红块
+    "pro7_pick_urdf": RokaePro7PickReal,     # 兼容别名，同一场景
     "pro7_pick_place": RokaePro7PickPlace,   # 取放整段（抓取 → 搬运 → 放置）
+    "dual_arm_reach": DualArmReach,          # 双臂各自到达（lkwy73_o1，14 关节）
+    "dual_arm_coop": DualArmCoopReach,       # 双臂共持一根刚性杆
 }
 def make_env(name, **kwargs): ...
 def env_names(): ...
@@ -212,7 +272,7 @@ def env_names(): ...
 - **模型**：`n` 个力矩驱动的 hinge 关节 + 恰好一个 `mocap` 目标体（无质量、不参与碰撞），
   以及一个 `tip/tool` site 作为末端。
 - **观测**：`[cos q, sin q, dq, tip−target, target]`，维度由模型自动推出
-  （`3·n_dof + 2·pos_dim`，`pos_dim` 平面臂为 2、空间臂为 3）。
+  （`3·n_dof + 2·pos_dim`，当前模型 `pos_dim = 3`）。
 - **动作**：每关节 `[-1, 1]` 归一化力矩；`step` 里 `np.clip`。
 - **奖励**：`-dist - ctrl_cost·Σctrl² - vel_cost·Σqvel² + shaping(dist) + 命中奖励`。
 - **渲染**：惰性创建 `mujoco.Renderer`，相机取类属性 `CAMERA`。
@@ -220,47 +280,53 @@ def env_names(): ...
 
 子类只需要提供三样东西：`MODEL_PATH`、`TIP_SITE`/`CAMERA`/`POS_DIM`，
 以及 `_reset_episode()`（设置 `qpos/qvel` 并返回目标点）。需要“接近度塑形”
-的六/七轴臂再额外覆盖 `_shaping()`。
+的 Pro7 再额外覆盖 `_shaping()`。
 
 > ⚠️ **观测布局就是 checkpoint 的 ABI**：维度与顺序一旦改变，已训练的
-> `results/ppo_*.zip` 就会失效。平面二连杆历史上用的是**交错**顺序
-> `[cos q1, sin q1, cos q2, sin q2, …]`，其余环境用的是**分块**顺序
-> `[cos q1.., sin q1.., …]`；基类用 `INTERLEAVED_ANGLES` 明确标记这一差异，
-> `tests/test_envs.py` 会把它钉死。
+> `results/ppo_*.zip` 就会失效。当前所有到达环境都用**分块**顺序
+> `[cos q1.., sin q1.., …]`，`tests/test_envs.py` 会把它钉死。
 
-#### `env/two_joint_reacher.py` —— `TwoJointReacher(BaseReacher)`
+#### `env/rokae_reacher.py` —— `RokaePro7RealReacher(BaseReacher)`
 
-把 `two_joint_arm.xml` 包装成标准 Gymnasium 环境。
+把 `rokae_xmate_pro7_real.xml` 包装成七自由度到达任务。
 
-- **观测（10 维，交错 cos/sin）**：`[cos q1, sin q1, cos q2, sin q2, dq1, dq2, tip−target(2), target(2)]`。
-- **动作（2 维）**：`joint1/joint2` 的力矩。
-- **重置**：随机初始关节角（±0.2），目标均匀采样在半径 `0.25~1.0` 的环带内（臂总长 1.05，保证可达）。
-- **任务参数**：命中阈值 `target_radius=0.08`，时间上限 `max_steps=120`，相机 `cam_xy`。
-- **info**：`dist_to_target / tip / target / success / steps`，供回调与评估使用。
-
-#### `env/three_joint_reacher.py` —— `ThreeJointReacher(BaseReacher)`
-
-与二维版本同构，差异在于：
-
-- **观测（15 维，分块 cos/sin）**：`[cos q1..3, sin q1..3, dq1..3, tip−target(3), target(3)]`。
-- **动作（3 维）**：三关节力矩。
-- **目标采样**：球坐标——半径 `0.25~0.8`、极角 `0.05~1.0`、方位角 `[-π,π]`，保证落在可达圆锥内（总臂长 0.95）。
-- **奖励/终止**：命中阈值 `0.10`，`max_steps=150`；其余逻辑一致。
-- **渲染**：`cam_iso` 等距相机。
-
-#### `env/rokae_reacher.py` —— `RokaeReacher(BaseReacher)`（ER3 / Pro7）
-
-把 `rokae_xmate_er3.xml` 包装成六自由度到达任务；`RokaePro7Reacher` /
-`RokaePro7RealReacher` 只改 `MODEL_PATH` 与采样/命中参数，就得到七自由度版。
-
-- **观测（24 维）**：`[cos q1..6, sin q1..6, dq1..6, tip−target(3), target(3)]`。
-- **动作（6 维）**：六关节力矩。
+- **观测（27 维）**：`[cos q1..7, sin q1..7, dq1..7, tool−target(3), target(3)]`。
+- **动作（7 维）**：七关节力矩。
 - **目标采样（关键设计）**：以随机“锚点姿态”为中心，起始与目标姿态都在其附近
   采样；目标由目标姿态的**正运动学 (FK)** 得到 → **天然可达**，无需解析逆解。
-  初始距离均值约 0.5 m，适中、可学。
+  初始距离适中、可学（`START_STD=0.10`、`TARGET_STD=0.24`）。
 - **奖励**：`-dist − 0.0005·Σqvel² + 0.5·exp(−dist/0.3) + 2(命中)`。指数“接近度”
-  塑形让远距离也有连续梯度，是六自由度能学会的关键。
-- **命中阈值**：`target_radius=0.12`，时间上限 `max_steps=200`。
+  塑形让远距离也有连续梯度，是 7 轴能学会的关键。
+- **命中阈值**：`target_radius=0.15`，时间上限 `max_steps=250`。
+
+#### `env/dual_arm_reacher.py` —— `MultiArmReacher` 及其两个双臂任务
+
+双臂版本没有沿用 `BaseReacher`：那里的实现假设"一个 tip site + 一个 mocap 目标 +
+`nq == nu`"，而双臂模型是 36 个关节里只驱动 14 个。这里改成按 **模型里的臂列表**
+驱动，`ARMS` 里加一项就能扩到三臂。
+
+```text
+MultiArmReacher(gym.Env)               # 观测/动作/奖励/复位/render 的唯一实现
+├── DualArmReach(MultiArmReacher)      # dual_arm_reach：两臂各自独立目标
+└── DualArmCoopReach(DualArmReach)     # dual_arm_coop：两目标是一根刚性杆的两端
+```
+
+- **观测（60 维）**：每臂 `[cos q(7), sin q(7), dq(7), tip−target(3)]` 共 24 维 →
+  两臂 48 维，再接全局 `tips(6)` 与 `targets(6)`，让每条臂都能看到对方的进度。
+- **动作（14 维）**：两臂 14 个关节的归一化力矩 `[-1, 1]`，直接写入 `data.ctrl`。
+- **目标采样**：与 Pro7 同思路——随机锚点姿态附近采样"起始姿态"和"目标姿态"，
+  目标由目标姿态 **FK** 得到，因此天然可达（`START_STD=0.12`、`TARGET_STD=0.30`）。
+  复位时最多重抽 25 次，保证两臂起始距离都 ≥ `MIN_START_DIST=0.12 m`
+  （否则约 0.5% 的回合会"一开局就成功"）。
+- **奖励**：`−mean(dist) − 0.0005·Σdq² + 0.5·exp(−max_dist/0.3)`
+  `+ 1.0×新建模的达标臂数 + 2.0(两臂都命中)`。单臂一次性加分是多臂任务的关键：
+  否则策略在"两条臂都到位"之前拿不到任何离散信号。
+- **终止**：两臂都进入 `target_radius=0.08 m`；`max_steps=200`。
+- **协作变体**：目标由**左臂参考姿态 + 其镜像姿态** FK 得到（因此是两臂真的能同时
+  摆出的构型），再整体做一次小刚性变换（绕中点的 yaw ≤0.22 rad、平移 ≤0.04 m）。
+  奖励额外减去 `2.0×|实际杆向量−目标杆向量|`，成功还要求杆长误差 <
+  `PAIR_TOLERANCE=0.05 m`。`env.reference_pose` / `env.achievable_pair` 保留下来
+  供测试核对"这一对目标确实可同时达到"（实测目标离可达构型中位 0.06 m、95% 0.14 m）。
 
 ---
 
@@ -268,7 +334,7 @@ def env_names(): ...
 
 #### `train_ppo.py` —— PPO 训练入口
 
-- **CLI**：`--env`（默认 `two_joint`）、`--steps`、`--seed`、`--lr`、`--model`、`--init-model`、
+- **CLI**：`--env`（默认 `pro7_urdf`）、`--steps`、`--seed`、`--lr`、`--model`、`--init-model`、
   `--n-envs`、`--device`，以及**实时可视化**开关 `--viewer` / `--viewer-env` / `--viewer-fps`。
 - **向量化环境**：`DummyVecEnv` 包 4 个 `Monitor` 环境。
 - **策略**：`PPO("MlpPolicy")`，超参 `n_steps=1024`、`batch_size=256`、`n_epochs=10`、`gamma=0.99`、`gae_lambda=0.95`、`clip_range=0.2`、`vf_coef=0.5`，在 `cuda` 上训练。
@@ -286,14 +352,14 @@ def env_names(): ...
 
 - `LiveViewer(model, data, camera=..., fps=..., key_callback=...)`：
   - `sync()` 发布当前 `data` 状态，**按 fps 节流**，所以"每步都 sync"也不会压垮 UI；
-  - `set_camera()` 依次尝试给定相机名（环境自带 `CAMERA` → `cam_iso` → `cam_xy`）；
+  - `set_camera()` 依次尝试给定相机名（环境自带 `CAMERA` → `cam_iso`）；
   - `set_status([...])` 用 `Handle.set_texts()` 在窗口四角显示训练指标（最多 4 行）；
   - `close()` 关窗后 `sleep(0.6)`，等 UI 线程自己收完 GLFW，避免解释器退出时段错误；
   - `launch=` 可注入（测试用假句柄，**不需要显示器**）。
 - `Pacer(speed, sim_dt)`：把循环限制到可观看的速率（`speed=1` 即 1× 实时，
   物理步长 0.02 s → 50 步/秒；`speed<=0` 表示不限速）。训练循环每步 `tick()`
   即可，落后时会自动重新对齐而不追赶。
-- 被 `train_ppo.py`、`train_live.py`、`viewer_demo.py`、`view_pick.py` 共用，
+- 被 `train_ppo.py`、`grasp/train_live.py`、`viewer_demo.py`、`grasp/view.py` 共用，
   启动/相机/关闭这三段样板代码只写一次。
 
 ---
@@ -313,7 +379,7 @@ def env_names(): ...
 - 强制软件 OpenGL（`LIBGL_ALWAYS_SOFTWARE=1`、`GALLIUM_DRIVER=llvmpipe`），保证在无 GPU 上下文/软渲染环境下也能开窗。
 - `launch_passive(env.model, env.data, key_callback)` 打开原生 MuJoCo Simulate 窗口（非阻塞 UI 线程）。
 - **主循环**：`predict → env.step → viewer.sync()`，按 `fps` 限帧；到达/超时/按 `T` 就换新目标。
-- 把相机固定为模型自带的 `cam_xy` 或 `cam_iso`。
+- 把相机固定为模型自带的 `CAMERA`（Pro7 场景是 `cam_iso`）。
 - **收尾**：`finally` 里 `viewer.close()` 后 `sleep(0.6)`，等 daemon UI 线程自行清理 GLFW，避免主线程与它并发 `glfw.terminate()` 导致的段错误。
 - **CLI**：`--env/--model/--seed/--fps/--episodes`（`--episodes` 用于自动关闭，默认运行到关窗）。
 
@@ -323,28 +389,15 @@ def env_names(): ...
 
 ---
 
-### 4.5 可行性基准层
-
-#### `ik_probe.py` —— 二连杆解析 IK + PD 力控
-
-- 二连杆标准逆运动学（`L1=0.55, L2=0.50`），解出肩/肘目标角。
-- 用饱和 PD（`a = 6·(q*−q) − 1.2·q̇`）驱动，统计 200 集的初始/最终距离与成功率。
-- 用途：作为“这个任务到底能不能做到”的**上界参考**。若 IK/PD 都做不好，通常是动力学/接触/奖励设计有问题。
-
-#### `ik_probe3d.py` —— 3R 解析 IK + PD 力控
-
-- 偏航 `q1=atan2(y,x)` + 垂直平面二连杆 IK，求肩/肘目标角；注意把 `q2/q3` 取反以匹配 MuJoCo 的 hinge 转向。
-- 同样用 PD 力控跑 200 集，给出 3D 任务的可达性基线。
-
----
-
-### 4.6 工具层
+### 4.5 共享模块层（`paths.py` / `cli.py`）
 
 #### `paths.py` —— 项目路径 / 默认值 / 模型校验
 
 - `PROJECT_ROOT / ASSETS_DIR / RESULTS_DIR`、`asset_path()`、`results_path()`：
   所有绝对路径都从这里来，**脚本里不再出现 `/home/wj/...`**，换机器/改目录名不用改代码，
   而且从任意工作目录运行都可以。
+  这个文件**必须留在仓库根**：`PROJECT_ROOT` 就是"装着 `paths.py` 的那个目录"，
+  `ros2_ws/src/pro7_pick_place_ros/project.py` 也用它（连同 `grasp/` 下的文件）来认仓库。
 - `default_model_path(env)` / `default_tb_dir(env)` / `default_out_dir(env)`：
   `results/ppo_<env>.zip`、`results/tb_<env>/`、`results/<env>/` 的唯一出处。
 - `ensure_dir(path)`：需要时创建输出目录。
@@ -361,14 +414,59 @@ def env_names(): ...
 
 ---
 
-### 4.7 抓取层（相机 + 夹爪 + 红块）
+### 4.6 模型工具层 `tools/`
 
-#### `grasp_common.py` —— 抓取场景与专家的唯一来源
+`assets/` 下的模型都是**生成物**：这几个脚本把厂商 URDF / 清洗过的机器人描述变成本项目要用的
+MJCF、URDF 与 STL。改一处参数就跑一次脚本，别手改生成物——测试会重新生成并与仓库里的文件比对。
+
+#### `tools/convert_hand_urdf.py` —— 厂商 L20 URDF → MuJoCo 片段
+
+- 读 `assets/linkerhand_l20/right/` 的 SolidWorks 版 URDF，重新输出
+  `linkerhand_l20_right_{assets,body,actuators}.xml`（22 个 body 的 `hand_*` 树、22 个网格声明、
+  21 个位置伺服）、`linkerhand_l20_poses.json`（开手 / 抓握预设）与单文件预览模型。
+- 顺手标定抓取姿态（`grip` 的一行实测输出），并把结果写进 `poses.json`。
+- 直接 `python3 tools/convert_hand_urdf.py` 重新生成；没有参数。
+
+#### `tools/convert_arm_urdf.py` —— MuJoCo 抓取场景 → URDF（给 rviz2）
+
+- 读**编译后的** `assets/rokae_xmate_pro7_pick_real.xml`，把机器人部分重新写成 URDF：
+  位姿、轴、限位、geom、惯量全部来自 `mjModel`，所以导出不会和仿真漂移。
+- `--hand merged`（默认）把 L20 按开手姿态烘进 `gripper` 连杆；`--hand articulated` 出 22 连杆的
+  完整手；`--with-cell` 连台面/放置垫一起出；`--collision` 每个 geom 再加一个 `<collision>`；
+  `--mesh-uri package:...` 换成 ROS 包内路径。
+- `--check` 调 `tools/urdf_selfcheck.py` 复核；生成物的第三行会写"由哪个脚本生成"，改了脚本名要
+  重跑一次（`tests/test_arm_urdf.py::test_committed_urdf_is_regenerable` 会比对）。
+
+#### `tools/urdf_selfcheck.py` —— 导出的 URDF 与 MuJoCo 逐 geom 对比
+
+- 把导出重新用 MuJoCo 加载（把 `<visual>` 改写成 `<collision>`，因为 MuJoCo 读 URDF 只认碰撞体），
+  在零位与若干随机关节位对比**每个 geom 的世界位姿与包围半径**，质量按总和比。
+- 被 `tools/convert_arm_urdf.py --check` 与 `tests/test_arm_urdf.py` 复用。
+
+#### `tools/make_wrist_flange.py` —— Pro7 法兰 → L20 转接件
+
+- `PROFILE` 是一组 `(半径, z)` 回转母线，转成 `assets/meshes/pro7_l20_flange.stl`，
+  补上腕法兰与手底座之间 60 mm 的空档。
+- 场景里以**纯视觉、零质量**的 geom 挂载（`contype=0` / `density=0`），质点、惯性、相机画面
+  一律不变（`tests/test_wrist_flange.py` 钉住这一点）。
+
+#### `tools/build_dual_arm_model.py` —— lkwy73_o1 双臂描述 → 任务模型
+
+- 读清洗过的双臂描述，生成 `assets/dual_arm_reach.xml`：两个 7 轴臂的归一化力矩电机、
+  22 个手指关节用 equality 钉在开手位、每只手一个 `tip` site、两个 mocap 目标、四对 CAD
+  自接触 `exclude`；同时把降面网格拷到 `assets/dual_arm/meshes/`。
+- `--check` 只校验不写盘。
+
+---
+
+### 4.7 抓取层（相机 + L20 手 + 红块）
+
+#### `grasp/common.py` —— 抓取场景与专家的唯一来源
 
 - **场景常量**：工作台高度 `TABLE_Z`、红块边长 `CUBE_SIDE`、`CUBE_X/CUBE_SPREAD`、
   初始位姿 `START_POSE`、夹爪行程 `GRIPPER_TRAVEL` / 张开间隙 `GRIP_OPEN`。
   `MODEL_PATH = assets/rokae_xmate_pro7_pick_real.xml`（**真实 URDF 网格**）与所有脚本都以这里为准
-  （红块边长复用 `detect_red_cube.DEFAULT_CUBE_SIDE`，视觉与仿真不可能各说各话）。
+  （红块边长复用 `grasp.detect.DEFAULT_CUBE_SIDE`，视觉与仿真不可能各说各话）。
 - **干扰块**：`DISTRACTORS = ((绿, 0.96/0.15), (蓝, 0.96/-0.15), (黄, 1.00/0.00))`，
   与目标块同尺寸、同质量。位置经过实测挑选：既落在眼在手相机的可见梯形内
   （能看到 → 视觉必须区分），又完全避开红块的采样足迹（不会被误当成目标）。
@@ -383,14 +481,14 @@ def env_names(): ...
 - `scene_ids(model)`：按**名字**解析 site/geom/joint/body 及 qpos/dof 地址，
   替代原先散落的 `qpos[7]`、`qpos[8:11]` 这类魔数索引。
 - `make_scene(seed, cube_xyz)` / `place_cube()`：构造抓取场景。
-- `detect_cube(model, data, renderer)`：眼在手 RGB-D → 红块世界坐标（内部调用 `detect_red_cube`）。
+- `detect_cube(model, data, renderer)`：眼在手 RGB-D → 红块世界坐标（内部调用 `grasp.detect`）。
 - `servo_command(...)`：**专家解析伺服**（分辨率控制 + 力限幅），返回
   `(各臂关节力矩, 是否该闭合夹爪, 当前距离)`；`teacher_action(env)` 把它包成策略用的 8 维动作。
-  `grasp_demo`、`make_grasp_montage`、`supervised_grasp`（DAgger 老师）共用同一套控制律。
+  `grasp.demo`、`grasp.montage`、`grasp.supervised`（DAgger 老师）共用同一套控制律。
 - `is_grasped(...)` / `gripper_gap(...)`：抓取成功判据（双指接触 + 间隙 + 中心距），
   环境与脚本共用，不会出现“演示说抓住了、环境说没抓住”。
 
-#### `grasp_policy.py` —— 抓取策略网络
+#### `grasp/policy.py` —— 抓取策略网络
 
 - `Policy`（128-128-Tanh MLP）、`OBS_DIM=30 / ACT_DIM=8`、`action()`、`load_policy()`、`rollout()`。
 - 训练脚本与回放脚本都从这里取网络定义，检查点不会因为架构分散而加载不上。
@@ -403,7 +501,7 @@ def env_names(): ...
   灌满 DAgger 缓冲区，把在线训练带跑偏——实测过）。
 - **观测（38 维）** = 抓取环境的 30 维 + `holding` + 子目标误差 `goal-grasp`(3) +
   方块到垫子的误差 `pad-cube`(3) + `plan.done`（到位该松手的标志）。
-- **搬运计划** `grasp_common.PlacePlanner`：`settle(15 步) → lift → carry → lower`，
+- **搬运计划** `grasp.common.PlacePlanner`：`settle(15 步) → lift → carry → lower`，
   每一段以 1 cm 为一步的虚拟路点推进（`PLACE_WAYPOINT`），步进速度 ≈ `kp/kd·waypoint` ≈ 2 cm/s。
   **必须**这么慢：夹爪只有 ~0.3 N 夹紧力，实测超过 ~4 cm/s 方块就被顶出钳口。
 - **搬运由环境执行**（`transport_assist=True`）：抓住方块后，环境用
@@ -430,26 +528,26 @@ def env_names(): ...
 
 #### 抓取脚本
 
-- `detect_red_cube.py`：红色分割（`red_mask`，阈值 `RED_MIN/RED_DOMINANCE` 只命中
+- `grasp/detect.py`：红色分割（`red_mask`，阈值 `RED_MIN/RED_DOMINANCE` 只命中
   高饱和红色，绿/蓝/黄干扰块天然被排除）+ 针孔反投影 + 深度反投影（`estimate_cube_world_rgbd`），
   并提供 `render_rgbd()`（颜色/深度渲染顺序只写一次，避免把彩色图渲染坏）与
   `project_world()`（世界点 → 像素，`_ray_world` 的严格逆变换）。
   > `project_world()` 修了一个真实 bug：图像行向下增长、相机局部 `y` 向上，
-  > 竖直像素应为 `cy - fy·y`；`detect_overlay.py` 原先用的是 `+`，导致绿色
+  > 竖直像素应为 `cy - fy·y`；`grasp/overlay.py` 原先用的是 `+`，导致绿色
   > “3D 投影”标记上下镜像、偏 60 多像素。现由 `test_projection_matches_the_red_blob` 钉住。
-- `grasp_demo.py`：检测 → 定位 → 伺服 → 抓取，输出成功率与定位误差。
-- `pick_place_demo.py`：源台抓取 → 提起 → 搬运 → 放到目标台放置垫，
+- `grasp/demo.py`：检测 → 定位 → 伺服 → 抓取，输出成功率与定位误差。
+- `grasp/pick_place_demo.py`：源台抓取 → 提起 → 搬运 → 放到目标台放置垫，
   输出成功率与落点误差，可选 `--video`（GIF）与 `--montage`（阶段拼图）。
-- `make_grasp_montage.py` / `detect_overlay.py` / `visualize_grasp.py` / `view_pick.py`：
+- `grasp/montage.py` / `grasp/overlay.py` / `grasp/visualize.py` / `grasp/view.py`：
   静态拼图 / 检测可视化 / 回放 GIF / 实时窗口。
-- `supervised_grasp.py` / `train_live.py`：在线 DAgger 监督训练（后者把训练过程录成 GIF）。
-  `train_live.py` 默认 `--task pick_place`：采集整段取放、评估同时打印 **pick % / place %**，
+- `grasp/supervised.py` / `grasp/train_live.py`：在线 DAgger 监督训练（后者把训练过程录成 GIF）。
+  `grasp/train_live.py` 默认 `--task pick_place`：采集整段取放、评估同时打印 **pick % / place %**，
   故事板按**阶段切换**取帧（接近/夹紧/提起/搬运/下降/松开），所以 GIF 里能看到完整的放置过程；
   `--task grasp` 回到原来的抓取任务。逐任务默认值（`TASK_DEFAULTS`）：取放 1 条/轮、
   400 次更新/轮、`--beta-min 0.5`、每轮至少采 2500 步（失败会提前结束 episode，
   靠这个下限保证数据量）；抓取 3 条/轮、50 次更新/轮、`--beta-min 0.2`。
   每轮评估后保留**最好**的检查点（这套物理很"刀尖"，轮间波动很大）。
-- `train_live.py --live` 打开实时窗口，默认按 **1× 实时**播放（`--live-speed N` 调速：
+- `grasp/train_live.py --live` 打开实时窗口，默认按 **1× 实时**播放（`--live-speed N` 调速：
   `0.5` 是慢放、`0` 为全速），采集阶段逐步 `sync()`、评估阶段通过
   `rollout_info(on_step=...)` 持续刷帧，所以窗口不会在轮次之间卡住；关窗只停止刷新，训练继续。
   仿真时长的物理下限是硬的（搬运被 0.3 N 夹紧力限制在 ~2 cm/s），所以"动作看起来太快"
@@ -488,7 +586,7 @@ def env_names(): ...
 
 ### 4.10 ROS 2 封装层 `ros2_ws/`
 
-把整段七轴取放（`grasp_common` 的解析专家 + `detect_red_cube` 的眼在手视觉）
+把整段七轴取放（`grasp.common` 的解析专家 + `grasp.detect` 的眼在手视觉）
 封装成 ROS 2 节点，物理/视觉/控制律一行都不复制。
 
 - `src/pro7_pick_place_interfaces/`：`PickPlaceStatus.msg`、`ResetScene.srv`、
@@ -498,7 +596,7 @@ def env_names(): ...
   RGB-D 检测/渲染、放置点搬移）。渲染器是 OpenGL 对象，只在**创建它的线程**里用，
   误用会被 `_assert_renderer_thread()` 拦成异常而不是段错误。
 - `src/pro7_pick_place_ros/simulator.py`：植物线程 + 唯一作业。逐控制步推进
-  `grasp_common.iter_pick_and_place()`，负责相机渲染与场景复位；`sim_hz` 决定播放速度
+  `grasp.common.iter_pick_and_place()`，负责相机渲染与场景复位；`sim_hz` 决定播放速度
   （`0` = 不限速）。
 - `src/pro7_pick_place_ros/node.py`：话题（`status`/`joint_states`/`cube_pose`/
   `detected_cube`/相机/`markers`/`/tf`）、服务（`reset`）、Action（`pick_place`）。
@@ -528,14 +626,13 @@ cd ros2_ws && ./run.sh              # 等价的工程内入口
 | 奖励主项用 `-距离`（稠密） | 提供连续梯度，比“命中有奖励才学得快”；配合命中 `+2` 提供稀疏事件信号。 |
 | 关节角用 `cos/sin` 进观测 | hinge 角无界，直接用角度会带来周期歧义。 |
 | 目标用 `mocap` 无碰撞体 | 运动学控制目标、不参与动力学，避免“靶子被撞飞”。 |
-| 物理上保证臂不与任何物体接触 | 曾因肩/肘球体嵌入地面把基座锁死，导致肩关节不动、PPO/IK 都学不动。 |
-| 3D 臂设为 0-g | 有俯仰关节时重力增大难度；0-g 保持“纯惯性控制”，与 2D 任务性质一致、更易收敛。 |
-| 提供解析 IK/PD 基线 | 用来区分“算法没学好”还是“任务本身不可行/环境有病”。 |
+| 到达任务里臂 geom 全部关闭接触 | 目标/台面之外没有任何接触力，纯惯性控制，PPO 更容易收敛。 |
+| Pro7 到达设为 0-g | 有俯仰关节时重力增大难度；0-g 保持“纯惯性控制”，更易收敛。 |
 | 所有入口用 `--env` 切换任务 | 复用同一套训练/评估/可视化代码，避免复制粘贴。 |
 | 路径/默认值集中在 `paths.py` | 脚本里不出现绝对路径，移动仓库或换工作目录都不用改代码。 |
 | 命令行集中在 `cli.py` | `--env/--model/--out` 语义与默认值永远一致，新脚本只写自己的参数。 |
-| 到达任务收敛到 `env/base_reacher.py` | 观测/动作/奖励/渲染只实现一次，2/3/6/7 轴不会各自漂移。 |
-| 抓取场景与专家收敛到 `grasp_common.py` | 台面/红块/夹爪尺寸与伺服增益只有一个来源；演示与环境的判据一致。 |
+| 到达任务收敛到 `env/base_reacher.py` | 观测/动作/奖励/渲染只实现一次，7 轴模型不会各自漂移。 |
+| 抓取场景与专家收敛到 `grasp/common.py` | 台面/红块/夹爪尺寸与伺服增益只有一个来源；演示与环境的判据一致。 |
 | 取放的"搬运"由环境执行，而不是交给策略 | 搬运力矩仅占量程 1~2%，比模仿网络的动作噪声还小，学出来的搬运必掉块；环境负责准静态搬运，策略负责接近/夹紧/重试/松手。 |
 | 取放专家提供"逐控制步"生成器（`iter_pick_and_place`） | 阻塞版一次跑完几千步，外部驱动（ROS 节点、实时窗口）无法中途发布状态或取消；生成器让 `pick_and_place()`、节点、测试共用同一份控制律。 |
 | ROS 节点把 MuJoCo 渲染器收在一根植物线程里 | `mujoco.Renderer` 是 OpenGL 对象，跨线程创建/销毁会直接段错误（实测：边渲染边重建场景必崩），所以复位与渲染都排队给植物线程执行。 |
@@ -548,13 +645,13 @@ cd ros2_ws && ./run.sh              # 等价的工程内入口
 | 新增一个机械臂/任务 | 写一个 XML 放进 `assets/`，在 `env/` 加一个 `BaseReacher` 子类（只需 `MODEL_PATH` + `_reset_episode`），注册进 `env/__init__.py` |
 | 调整到达任务的成功半径/步数 | 子类的 `DEFAULT_TARGET_RADIUS` / `DEFAULT_MAX_STEPS`（或构造函数参数） |
 | 调整观测/奖励结构 | `env/base_reacher.py`；**必须**同步更新 `tests/test_envs.py` 与重新训练 |
-| 调整工作台高度/红块大小/夹爪尺寸 | `grasp_common.py`（红块边长源自 `detect_red_cube.DEFAULT_CUBE_SIDE`）+ 对应 XML |
-| 调整专家伺服的快慢/力矩 | `grasp_common.py` 的 `KP/KD/FORCE_CLAMP/CLOSE_EPS`（演示、拼图、DAgger 老师同时生效） |
-| 调整取放落点 / 目标台 | `grasp_common.py` 的 `PLACE_TARGET` / `TABLE_2_POS`（+ `assets/rokae_xmate_pro7_pick_real.xml` 里的 `table2` / `place_pad` 几何） |
-| 调整搬运快慢 | `grasp_common.py` 的 `TRANSPORT_KP/KD/FORCE/WAYPOINT`（默认准静态；加快会让方块滑脱） |
-| 取放任务的搬运计划 / 松手时机 | `grasp_common.py` 的 `PlacePlanner`（`PLACE_WAYPOINT`/`PLACE_TOL`/`PLACE_XY_TOL`） |
-| 取放奖励 / 步数 / 观测 | `env/rokae_pro7_pick_place.py`（观测结构改动要同步 `grasp_policy.OBS_DIM_PLACE` 与 `tests`） |
-| 取放训练速度 / 播放快慢 | `train_live.py` 的 `TASK_DEFAULTS`（每轮条数、更新次数、`live_speed`）|
+| 调整工作台高度/红块大小/夹爪尺寸 | `grasp/common.py`（红块边长源自 `grasp.detect.DEFAULT_CUBE_SIDE`）+ 对应 XML |
+| 调整专家伺服的快慢/力矩 | `grasp/common.py` 的 `KP/KD/FORCE_CLAMP/CLOSE_EPS`（演示、拼图、DAgger 老师同时生效） |
+| 调整取放落点 / 目标台 | `grasp/common.py` 的 `PLACE_TARGET` / `TABLE_2_POS`（+ `assets/rokae_xmate_pro7_pick_real.xml` 里的 `table2` / `place_pad` 几何） |
+| 调整搬运快慢 | `grasp/common.py` 的 `TRANSPORT_KP/KD/FORCE/WAYPOINT`（默认准静态；加快会让方块滑脱） |
+| 取放任务的搬运计划 / 松手时机 | `grasp/common.py` 的 `PlacePlanner`（`PLACE_WAYPOINT`/`PLACE_TOL`/`PLACE_XY_TOL`） |
+| 取放奖励 / 步数 / 观测 | `env/rokae_pro7_pick_place.py`（观测结构改动要同步 `grasp.policy.OBS_DIM_PLACE` 与 `tests`） |
+| 取放训练速度 / 播放快慢 | `grasp/train_live.py` 的 `TASK_DEFAULTS`（每轮条数、更新次数、`live_speed`）|
 | 改夹爪几何 / 抓取参考点 | `assets/rokae_xmate_pro7_pick_real.xml` 的 `finger_*_g` 与 `grasp_center`（参考点必须在两指内侧面之间） |
 | 调整 PPO 超参 | `train_ppo.py` |
 | 换机器 / 换目录 / 改默认产物位置 | `paths.py` |
@@ -565,52 +662,42 @@ cd ros2_ws && ./run.sh              # 等价的工程内入口
 ## 6. 常用命令速查
 
 ```bash
-# 训练二连杆 / 三自由度臂
-python3 train_ppo.py                              # toy 二连杆，200k 步
-python3 train_ppo.py --env three_joint --steps 600000
+# 训练 Pro7 到达（默认环境 pro7_urdf）
+python3 train_ppo.py --steps 2000000
 
 # 训练时实时看 MuJoCo 窗口（关窗后训练继续）
-python3 train_ppo.py --env three_joint --steps 600000 --viewer
-python3 train_live.py --rounds 24 --live          # 取放整段训练 + 实时窗口（默认任务）
-python3 train_live.py --task grasp --rounds 24 --live   # 只训练抓取（0.5× 慢放）
+python3 train_ppo.py --steps 2000000 --viewer
+python3 grasp/train_live.py --rounds 24 --live          # 取放整段训练 + 实时窗口（默认任务）
+python3 grasp/train_live.py --task grasp --rounds 24 --live   # 只训练抓取（0.5× 慢放）
 
 # 断点续训
-python3 train_ppo.py --env three_joint --steps 600000 \
-  --init-model results/ppo_three_joint.zip
+python3 train_ppo.py --steps 2000000 \
+  --init-model results/ppo_pro7_urdf.zip
 
 # 评估 + 曲线 + 视频
-python3 eval_rollout.py --env three_joint --episodes 400
+python3 eval_rollout.py --env pro7_urdf --episodes 400
 
 # 实时 MuJoCo 窗口（关窗停止，T 换目标）
-python3 viewer_demo.py --env three_joint
+python3 viewer_demo.py --env pro7_urdf
 
 # 逼近→命中拼图
-python3 make_montage.py --env three_joint
+python3 make_montage.py --env pro7_urdf
 
-# 可行性基线
-python3 ik_probe.py
-python3 ik_probe3d.py
-
-# 珞石六自由度臂
-python3 train_ppo.py --env six_joint --steps 1000000
-python3 eval_rollout.py --env six_joint --episodes 300
-python3 viewer_demo.py --env six_joint
+# 视觉抓取（训练 / 回放）
+python3 train_ppo.py --env pro7_pick --steps 800000
 ```
 
 ---
 
 ## 7. 参考结果
 
-| 指标 | `two_joint`(2D) | `three_joint`(3D) | `six_joint`(ER3) | `pro7_joint`(Pro7) | `pro7_urdf`(Pro7 真实网格) |
-|---|---|---|---|---|---|
-| 整集成功率 | 100% | 98.5% | 48% | ~89.5% | 84.2% |
-| 终距 均值/中位 | 0.056 / 0.057 | 0.092 / 0.091 | 0.177 / 0.129 | 0.163 / 0.147 | 0.147 / 0.147 |
-| 平均到达步数 | ~27 (of 120) | ~31 (of 150) | ~130 (of 200) | ~61 (of 250) | ~61 (of 250) |
-| 基线 | 100% (IK/PD) | 100% (IK/PD) | FK 采样（天然可达） | FK 采样 | FK 采样 |
+| 指标 | `pro7_urdf`(Pro7 真实网格到达) |
+|---|---|
+| 整集成功率 | 84.2% |
+| 终距 均值/中位 | 0.147 / 0.147 m |
+| 平均到达步数 | ~61 (of 250) |
+| 目标 | FK 采样（天然可达） |
 
 > `pro7_urdf` 由 2.0M 步训练得到（`results/ppo_pro7_urdf.zip`，约 8.4 分钟 @ ~4000 步/秒）。
-> 胶囊版策略可零样本迁移到真实网格模型（关节链一致），实测 90% 命中率。
-
-> 六自由度明显更难：策略能把末端从约 0.5 m 压到约 0.13 m，并稳定进入 12 cm
-> 命中圈约一半时间。这是 PPO 从零学习六轴协调的真实水平；把命中半径放宽到
-> 0.15 m，成功率会显著上升。
+> 命中圈 0.15 m、单集上限 250 步；终距中位 0.147 m 说明多数回合是"刚好压线"命中，
+> 想更稳可以续训或把命中半径略放宽。

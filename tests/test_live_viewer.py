@@ -5,7 +5,7 @@ import time
 
 import pytest
 
-import grasp_common as gc
+import grasp.common as gc
 from live_viewer import LiveViewer, Pacer
 from train_ppo import LiveViewerCallback
 
@@ -161,7 +161,7 @@ def test_pacer_holds_the_target_rate():
 def test_rollout_reports_every_step():
     """The evaluation rollout must publish frames so the window never freezes."""
     from env import make_env
-    from grasp_policy import Policy, rollout
+    from grasp.policy import Policy, rollout
 
     env = make_env("pro7_pick", obs_target="true")
     ticks = []

@@ -13,22 +13,23 @@ cell instead of stopping the moment the cube is grabbed.  ``--task grasp`` runs
 the original grasp-only environment (episode over once the jaws close).
 
 The carry is gentle by design (the pinch holds ~0.3 N, so anything above
-~2 cm/s squeezes the cube out of the jaws - see :mod:`grasp_common`), which
+~2 cm/s squeezes the cube out of the jaws - see :mod:`grasp.common`), which
 makes one episode ~2200-3000 steps: at ``--live-speed 1`` that is ~50 s per
 round.  Use ``--live-speed 4``, or fewer ``--rounds``, to get through the
 training faster.
 
 Run::
 
-    python3 train_live.py --rounds 8
-    python3 train_live.py --rounds 24 --live
-    python3 train_live.py --task grasp --rounds 24 --live
+    python3 grasp/train_live.py --rounds 8
+    python3 grasp/train_live.py --rounds 24 --live
+    python3 grasp/train_live.py --task grasp --rounds 24 --live
 """
 
 from __future__ import annotations
 
 import argparse
 import os
+import sys
 from collections import deque
 
 import imageio.v2 as imageio
@@ -41,9 +42,13 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+# Allow `python3 grasp/train_live.py` as well as `python3 -m grasp.train_live`.
+if __package__ in (None, ""):
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from env import make_env
-from grasp_common import teacher_action, teacher_action_place
-from grasp_policy import Policy, action, rollout_info
+from grasp.common import teacher_action, teacher_action_place
+from grasp.policy import Policy, action, rollout_info
 from live_viewer import LiveViewer, Pacer
 from paths import ensure_dir, results_path
 

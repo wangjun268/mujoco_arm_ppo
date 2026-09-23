@@ -10,7 +10,7 @@
 #
 # What it prepares:
 #   * /opt/ros/$ROS_DISTRO/setup.bash and this workspace's install/setup.bash
-#   * MUJOCO_ARM_PPO_ROOT -> the checkout that holds grasp_common.py
+#   * MUJOCO_ARM_PPO_ROOT -> the checkout that holds the grasp/ package
 #   * LD_PRELOAD of the system libstdc++, which the Conda python needs before it
 #     can import rclpy's extension modules (see pro7_pick_place_ros/runtime.py;
 #     unset PRO7_SKIP_PRELOAD to opt out)

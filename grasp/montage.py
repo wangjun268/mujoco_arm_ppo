@@ -1,9 +1,15 @@
-"""Render an approach -> grasp montage of the Pro7 pick scene."""
+"""Render an approach -> grasp montage of the Pro7 pick scene.
+
+Run::
+
+    python3 grasp/montage.py
+"""
 
 from __future__ import annotations
 
 import argparse
 import os
+import sys
 
 import matplotlib
 
@@ -12,7 +18,11 @@ import matplotlib.pyplot as plt
 import mujoco
 import numpy as np
 
-from grasp_common import (
+# Allow `python3 grasp/montage.py` as well as `python3 -m grasp.montage`.
+if __package__ in (None, ""):
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from grasp.common import (
     GRIP_CTRL_CLOSED,
     GRIP_CTRL_OPEN,
     detect_cube,

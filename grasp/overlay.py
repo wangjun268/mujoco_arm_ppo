@@ -4,12 +4,17 @@ Produces a figure with (a) the raw eye-in-hand camera frame, (b) the red-mask /
 centroid overlay, and (c) a 3D plot of the arm, camera, gripper, the *detected*
 cube point (green) and the ground-truth cube (red), so you can see how well the
 vision localisation matches reality.
+
+Run::
+
+    python3 grasp/overlay.py
 """
 
 from __future__ import annotations
 
 import argparse
 import os
+import sys
 
 import matplotlib
 
@@ -18,8 +23,12 @@ import matplotlib.pyplot as plt
 import mujoco
 import numpy as np
 
-from detect_red_cube import estimate_cube_world_rgbd, project_world, red_mask
-from grasp_common import CUBE_SIDE, TABLE_Z, make_scene
+# Allow `python3 grasp/overlay.py` as well as `python3 -m grasp.overlay`.
+if __package__ in (None, ""):
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from grasp.common import CUBE_SIDE, TABLE_Z, make_scene
+from grasp.detect import estimate_cube_world_rgbd, project_world, red_mask
 from paths import ensure_dir, results_path
 
 

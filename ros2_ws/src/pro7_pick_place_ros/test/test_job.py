@@ -11,8 +11,8 @@ from pro7_pick_place_ros.simulator import PickPlaceJob, PickPlaceRequest
 
 @pytest.fixture(scope="module")
 def gc():
-    grasp_common, _paths = project.import_project(project.find_project_root())
-    return grasp_common
+    common, _paths = project.import_project(project.find_project_root())
+    return common
 
 
 def test_job_walks_the_expert_to_completion(gc):

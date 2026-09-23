@@ -24,14 +24,14 @@ def test_paths_point_at_the_checkout():
     assert os.path.isdir(PROJECT_ROOT)
     assert ASSETS_DIR == os.path.join(PROJECT_ROOT, "assets")
     assert RESULTS_DIR == os.path.join(PROJECT_ROOT, "results")
-    assert os.path.isfile(asset_path("two_joint_arm.xml"))
+    assert os.path.isfile(asset_path("rokae_xmate_pro7_real.xml"))
     assert results_path("x") == os.path.join(RESULTS_DIR, "x")
 
 
 def test_default_workspace_paths():
-    assert default_model_path("two_joint") == results_path("ppo_two_joint")
-    assert default_tb_dir("two_joint") == results_path("tb_two_joint")
-    assert default_out_dir("two_joint") == results_path("two_joint")
+    assert default_model_path("pro7_urdf") == results_path("ppo_pro7_urdf")
+    assert default_tb_dir("pro7_urdf") == results_path("tb_pro7_urdf")
+    assert default_out_dir("pro7_urdf") == results_path("pro7_urdf")
 
 
 def test_ensure_dir_creates_missing_directories(tmp_path):
@@ -63,9 +63,9 @@ def test_cli_fills_defaults_from_env():
     cli.add_env_arg(parser)
     cli.add_model_arg(parser)
     cli.add_out_arg(parser)
-    args = cli.apply_defaults(parser.parse_args(["--env", "three_joint"]))
-    assert args.model == default_model_path("three_joint")
-    assert args.out == default_out_dir("three_joint")
+    args = cli.apply_defaults(parser.parse_args(["--env", "pro7_pick"]))
+    assert args.model == default_model_path("pro7_pick")
+    assert args.out == default_out_dir("pro7_pick")
 
 
 def test_cli_rejects_unknown_env():

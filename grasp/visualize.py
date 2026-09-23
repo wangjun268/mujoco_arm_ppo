@@ -7,22 +7,27 @@ view anywhere (no GUI window needed).
 
 Run::
 
-    python3 visualize_grasp.py --mode expert
-    python3 visualize_grasp.py --mode policy --policy-path results/pro7_pick/grasp_policy_online.pt
+    python3 grasp/visualize.py --mode expert
+    python3 grasp/visualize.py --mode policy --policy-path results/pro7_pick/grasp_policy_online.pt
 """
 
 from __future__ import annotations
 
 import argparse
 import os
+import sys
 
 import imageio.v2 as imageio
 import mujoco
 import numpy as np
 
+# Allow `python3 grasp/visualize.py` as well as `python3 -m grasp.visualize`.
+if __package__ in (None, ""):
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from env import make_env
-from grasp_common import set_marker, teacher_action
-from grasp_policy import action, load_policy
+from grasp.common import set_marker, teacher_action
+from grasp.policy import action, load_policy
 from paths import ensure_dir, results_path
 
 

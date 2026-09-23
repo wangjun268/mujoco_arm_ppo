@@ -1,6 +1,6 @@
 """Real-time supervised (DAgger / behaviour-cloning) training for the 7-DOF grasp.
 
-An expert teacher — the resolved-rate servo from :mod:`grasp_common` — emits the
+An expert teacher — the resolved-rate servo from :mod:`grasp.common` — emits the
 *correct* action for whoever visits a state.  Early rounds mostly follow the
 expert (behaviour cloning); later rounds increasingly follow the learned policy
 while still being labelled by the expert (DAgger).  Covering the policy's own
@@ -9,7 +9,7 @@ Every few rounds the learned policy is rolled out on fresh cubes and the grasp
 success + final distance are printed live, so you can watch it learn in real
 time.  ``--obs-target true`` (default) feeds the ground-truth cube position,
 which makes this supervised stage learn reliably; ``--obs-target vision`` runs it
-on the RGB-D estimate from ``detect_red_cube`` (harder, since imitation of a
+on the RGB-D estimate from :mod:`grasp.detect` (harder, since imitation of a
 stiff servo is sensitive to observation noise).  Imitation reduces the reaching
 error and the grasp success grows (observed up to ~40 % with low train MSE
 ~0.01), but a stiff feedback grasp is best completed by the expert servo or
@@ -17,7 +17,7 @@ further RL.
 
 Run::
 
-    python3 supervised_grasp.py --rounds 40 --eval-every 4
+    python3 grasp/supervised.py --rounds 40 --eval-every 4
 """
 
 from __future__ import annotations
@@ -36,9 +36,13 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+# Allow `python3 grasp/supervised.py` as well as `python3 -m grasp.supervised`.
+if __package__ in (None, ""):
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from env import make_env
-from grasp_common import teacher_action
-from grasp_policy import Policy, action, rollout
+from grasp.common import teacher_action
+from grasp.policy import Policy, action, rollout
 from paths import ensure_dir, results_path
 
 
@@ -147,7 +151,7 @@ def main():
 
     if args.visualize:
         viewer_script = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "view_pick.py"
+            os.path.dirname(os.path.abspath(__file__)), "view.py"
         )
         cmd = [
             sys.executable, viewer_script,

@@ -11,8 +11,8 @@ from pro7_pick_place_ros.scene import GraspScene
 
 @pytest.fixture(scope="module")
 def gc():
-    grasp_common, _paths = project.import_project(project.find_project_root())
-    return grasp_common
+    common, _paths = project.import_project(project.find_project_root())
+    return common
 
 
 def _scene(gc, seed):
