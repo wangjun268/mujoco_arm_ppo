@@ -20,6 +20,10 @@
     <mesh name="link5" file="meshes/xMatePro7/xMatePro7_link5.stl" scale="0.001 0.001 0.001"/>
     <mesh name="link6" file="meshes/xMatePro7/xMatePro7_link6.stl" scale="0.001 0.001 0.001"/>
     <mesh name="link7" file="meshes/xMatePro7/xMatePro7_link7.stl" scale="0.001 0.001 0.001"/>
+    <!-- The real wrist adapter, at the same 60 mm stand-off the pick scene mounts
+         the hand on (tools/make_wrist_flange.py).  Visual only, so the reach task's
+         dynamics are untouched. -->
+    <mesh name="flange" file="meshes/pro7_l20_flange.stl"/>
     <texture name="tex" type="2d" builtin="checker" rgb1="0.16 0.16 0.16" rgb2="0.26 0.26 0.26" width="256" height="256"/>
     <material name="floor" texture="tex" texrepeat="6 6" reflectance="0"/>
   </asset>
@@ -59,6 +63,9 @@
                   <body name="link7" pos="0 0 0.25090877">
                     <joint name="joint7" type="hinge" axis="0 0 1" limited="true" range="-6.2832 6.2832"/>
                     <geom type="mesh" mesh="link7" contype="0" conaffinity="0" rgba="0.30 0.42 0.86 1"/>
+                    <geom name="wrist_flange" type="mesh" mesh="flange"
+                          contype="0" conaffinity="0" density="0"
+                          rgba="0.30 0.31 0.34 1"/>
                     <!-- Off-axis tool tip so every joint moves it. -->
                     <site name="tool" pos="0 0.06 0.0"/>
                   </body>

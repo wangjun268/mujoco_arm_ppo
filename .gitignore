@@ -12,3 +12,6 @@ MUJOCO_LOG.TXT
 ros2_ws/build/
 ros2_ws/install/
 ros2_ws/log/
+
+# take_box_rl training artefacts (same rule as results/: weights, tensorboard, videos)
+take_box_rl/runs/

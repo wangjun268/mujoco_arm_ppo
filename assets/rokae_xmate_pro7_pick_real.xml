@@ -2,7 +2,7 @@
   <!-- Pro7 with real URDF STL meshes + pinch gripper + RGB-D camera + red cube,
        plus green/blue/yellow distractor blocks on the same bench.  The
        distractors are deliberately *not* red so the red segmenter in
-       detect_red_cube.py keeps locking onto the target cube.
+       grasp/detect.py keeps locking onto the target cube.
        Two benches: the source bench (table, x>0) carries the cube and the
        distractors; the destination bench (table2, +y side) carries a flat
        "place pad" marking where the cube should be put down. -->
@@ -24,8 +24,11 @@
     <mesh name="link5" file="meshes/xMatePro7/xMatePro7_link5.stl" scale="0.001 0.001 0.001"/>
     <mesh name="link6" file="meshes/xMatePro7/xMatePro7_link6.stl" scale="0.001 0.001 0.001"/>
     <mesh name="link7" file="meshes/xMatePro7/xMatePro7_link7.stl" scale="0.001 0.001 0.001"/>
+    <!-- Wrist adapter that spans the 60 mm between the Pro7's link7 flange face
+         and the L20's base (see tools/make_wrist_flange.py, which sizes it from both). -->
+    <mesh name="flange" file="meshes/pro7_l20_flange.stl"/>
     <!-- LinkerHand L20 dexterous hand (vendored vendor URDF, converted to MJCF
-         fragments by convert_hand_urdf.py). -->
+         fragments by tools/convert_hand_urdf.py). -->
     <include file="linkerhand_l20/linkerhand_l20_right_assets.xml"/>
     <texture name="tex" type="2d" builtin="checker" rgb1="0.16 0.16 0.16" rgb2="0.26 0.26 0.26" width="256" height="256"/>
     <material name="floor" texture="tex" texrepeat="6 6" reflectance="0"/>
@@ -80,6 +83,14 @@
                     <geom type="mesh" mesh="link7" contype="0" conaffinity="0" rgba="0.30 0.42 0.86 1"/>
 
                     <body name="gripper" pos="0 0 0.06">
+                      <!-- The 60 mm between the wrist face (z = 0) and the hand
+                           base (z = 0.06) is the real wrist adapter.  Visual
+                           only: density 0 and no contacts, so the calibrated
+                           grasp dynamics and the eye-in-hand view are exactly
+                           as they were without it.  Mesh: tools/make_wrist_flange.py -->
+                      <geom name="wrist_flange" type="mesh" mesh="flange"
+                            pos="0 0 -0.06" contype="0" conaffinity="0"
+                            density="0" rgba="0.30 0.31 0.34 1"/>
                       <!-- L20 wrist mount: the hand's own frame *is* the tool
                            frame, so the fingers run along the old approach
                            axis (+z) and the palm faces +x.  The exported
@@ -87,7 +98,7 @@
                            the point where the closed fingertips meet, which is
                            what the resolved-rate expert servos onto the cube.
                            Fingers are driven as one open/close synergy (see
-                           grasp_common.HAND_*). -->
+                           grasp.common.HAND_*). -->
                       <include file="linkerhand_l20/linkerhand_l20_right_body.xml"/>
                       <!-- Eye-in-hand camera: in front of the palm's face
                            (x=0.032) looking down the fingers at the cube.  It
@@ -109,7 +120,7 @@
     <body name="cube" pos="0 0 0.9">
       <freejoint/>
       <!-- contype 4 / conaffinity 6: the graspable bodies collide with the
-           L20 (bit 2, see convert_hand_urdf.py) and with each other (bit 4),
+           L20 (bit 2, see tools/convert_hand_urdf.py) and with each other (bit 4),
            but never with the arm's or the hand's own meshes. -->
       <geom name="cube_geom" type="box" size="0.025 0.025 0.025" material="red_glow" density="30000" friction="3 0.5 0.1" condim="6" contype="4" conaffinity="6"/>
       <site name="cube_site" pos="0 0 0"/>
@@ -120,7 +131,7 @@
          band (x 0.66..0.90, y -0.08..0.08), so they are seen but never
          mistaken for the red target.  They collide, so they also act as
          physical obstacles the arm can hit while reaching for the cube.
-         Positions match grasp_common.DISTRACTORS (the env re-places them at
+         Positions match grasp.common.DISTRACTORS (the env re-places them at
          every reset). -->
     <body name="distractor_green" pos="0.96 0.15 0.475">
       <freejoint/>

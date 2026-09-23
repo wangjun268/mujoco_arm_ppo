@@ -1,0 +1,239 @@
+{
+  "comment": "take_box 双臂工位的几何与训练参数。坐标单位 m / rad。模型由 build_cell_model.py 生成。",
+  "robot": {
+    "source": "dual_arm_mjcf",
+    "comment_source": "dual_arm_mjcf = 直接用 lkwy73_o1 双臂模型（一台本体带左右臂和双手）；single_arm_urdf = 用单臂描述实例化两次（原来的 ROKAE 方案）。",
+    "path": "/home/wj/urdf/lkwy73_o1_dual_arm_clean/lkwy73_o1_dual_arm.xml",
+    "mesh_dir": "/home/wj/urdf/lkwy73_o1_dual_arm_clean/meshes",
+    "pos": [
+      0.0,
+      0.0,
+      0.95
+    ],
+    "euler_deg": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "comment_pos": "本体底座法兰离地 0.95 m，双臂自然下垂后手在 z≈0.2 m，正好够到台面。",
+    "arms": {
+      "left": {
+        "joints": [
+          "L1_Joint",
+          "L2_Joint",
+          "L3_Joint",
+          "L4_Joint",
+          "L5_Joint",
+          "L6_Joint",
+          "L7_Joint"
+        ],
+        "wrist_body": "L7_Link",
+        "finger_prefix": "lh_",
+        "finger_joints": [
+          "lh_thumb_cmc_yaw",
+          "lh_thumb_cmc_pitch",
+          "lh_thumb_ip",
+          "lh_index_mcp_pitch",
+          "lh_index_dip",
+          "lh_middle_mcp_pitch",
+          "lh_middle_dip",
+          "lh_ring_mcp_pitch",
+          "lh_ring_dip",
+          "lh_pinky_mcp_pitch",
+          "lh_pinky_dip"
+        ]
+      },
+      "right": {
+        "joints": [
+          "R1_Joint",
+          "R2_Joint",
+          "R3_Joint",
+          "R4_Joint",
+          "R5_Joint",
+          "R6_Joint",
+          "R7_Joint"
+        ],
+        "wrist_body": "R7_Link",
+        "finger_prefix": "rh_",
+        "finger_joints": [
+          "rh_thumb_cmc_yaw",
+          "rh_thumb_cmc_pitch",
+          "rh_thumb_ip",
+          "rh_index_mcp_pitch",
+          "rh_index_dip",
+          "rh_middle_mcp_pitch",
+          "rh_middle_dip",
+          "rh_ring_mcp_pitch",
+          "rh_ring_dip",
+          "rh_pinky_mcp_pitch",
+          "rh_pinky_dip"
+        ]
+      }
+    },
+    "excludes": [
+      [
+        "base_link",
+        "L1_Link"
+      ],
+      [
+        "base_link",
+        "R1_Link"
+      ],
+      [
+        "L5_Link",
+        "L7_Link"
+      ],
+      [
+        "R5_Link",
+        "R7_Link"
+      ]
+    ],
+    "comment_excludes": "CAD 里固有重叠的 4 对（L1/base、L5/L7 及镜像），不排除会让双臂在任何位姿都被推开。",
+    "grip_closed": {
+      "lh_": 1.2,
+      "rh_": 1.2
+    },
+    "joint_gears": [
+      8.0,
+      8.0,
+      6.0,
+      6.0,
+      4.0,
+      3.0,
+      3.0
+    ],
+    "joint_damping": 1.0,
+    "joint_armature": 0.02,
+    "finger_kp": 1.0
+  },
+  "legacy_arm": {
+    "urdf": "/home/wj/rokae_ros2/rokae_description/urdf/xMatePro7.urdf.xacro",
+    "comment_urdf": "7 轴珞石描述。本机只有 Pro3/Pro7 是 7 轴（xMateER7 那份是 6 轴），拿到 ER Pro 7 轴的官方 URDF 时改这里即可。",
+    "mesh_scale": [
+      0.001,
+      0.001,
+      0.001
+    ],
+    "comment_gears": "归一化力矩上限（ctrl=1 时的 Nm）。真实极限是 217/217/102/66/66/66/66，但 20 ms 步长下必须按惯量缩小，否则数值发散（与同系列 Pro7 到达模型一致：13 kg 臂用 10 Nm）。",
+    "joint_gears": [
+      18.0,
+      18.0,
+      12.0,
+      12.0,
+      8.0,
+      5.0,
+      5.0
+    ],
+    "joint_armature": 0.05,
+    "comment_damping": "0.5 是 Pro7 到达模型的取值；这里臂重 24 kg，取 2.0 让随机扭矩下的峰值角速度落在真机量级（~10 rad/s），也更利于收敛。",
+    "joint_damping": 2.0
+  },
+  "cell": {
+    "arms": {
+      "left": {
+        "pos": [
+          0.0,
+          0.46,
+          0.0
+        ],
+        "euler_deg": [
+          0.0,
+          0.0,
+          180.0
+        ]
+      },
+      "right": {
+        "pos": [
+          0.0,
+          -0.46,
+          0.0
+        ],
+        "euler_deg": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    "comment_arms": "两臂相对而立，间距 0.92 m；改 pos/euler 即可对齐真实工位安装。",
+    "table": {
+      "size": [
+        0.8,
+        1.2,
+        0.04
+      ],
+      "pos": [
+        0.42,
+        0.0,
+        0.45
+      ]
+    },
+    "box": {
+      "size": [
+        0.28,
+        0.4,
+        0.18
+      ],
+      "pos": [
+        0.42,
+        0.0,
+        0.55
+      ],
+      "mass": 1.0
+    },
+    "floor_z": -0.02,
+    "comment_cell": "台面顶面 z=0.47，箱子（0.28×0.40×0.18）居中放在台面上：箱心 0.55、底面 0.46 与台面齐平。抬升目标 = 台面顶面 + task.lift_height = 0.65，即箱心抬起 0.10 m。位置是按 IK 可达性搜出来的：x=0.42/z=0.55 时左右掌心到箱面残差 < 5 mm。"
+  },
+  "hand": {
+    "comment": "O6（6 通道：拇弯/拇摆/食/中/无名/小）没有 CAD，这里用参数化几何体代替；拿到 O6 网格后替换 build_cell_model.py 的 build_hand()。",
+    "flange_offset": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "palm": {
+      "half_size": [
+        0.042,
+        0.045,
+        0.016
+      ],
+      "mass": 0.2
+    },
+    "finger": {
+      "length": 0.052,
+      "radius": 0.008,
+      "mass": 0.02
+    },
+    "thumb": {
+      "length": 0.045,
+      "radius": 0.01,
+      "mass": 0.03
+    },
+    "grip_open": 0.0,
+    "grip_closed": 1.25,
+    "kp": 3.0
+  },
+  "task": {
+    "grasp_tol": 0.045,
+    "lift_height": 0.18,
+    "comment_height_tol": "成功判定的高度容差。0.02 m 时确定性策略只能连续满足 7-8 步（需 10 步）；0.03 m 下 100%。这是任务规格，不是训练指标。",
+    "height_tol": 0.03,
+    "tilt_tol_deg": 15.0,
+    "hold_steps": 10,
+    "max_steps": 260,
+    "comment_grasp_roll": "预抓取姿态绕掌法线的滚转角（deg）。这个工位够不到\"手指朝前\"的滚转（残差 21°，只能让手背贴箱面），30° 时两只手残差 ~1°，掌心贴箱面、手指朝前下方。扫描数据见 build_cell_model.py 的注释。",
+    "grasp_roll_deg": 30.0,
+    "reward": {
+      "grasp_close": 0.5,
+      "release_grip": 0.2,
+      "grasp_bonus": 2.0,
+      "success_reward": 5.0,
+      "hold_reward": 0.5,
+      "tilt_cost": 2.0,
+      "height_weight": 2.0,
+      "ctrl_cost": 0.0005,
+      "gamma": 0.99
+    },
+    "comment_reward": "奖励函数在 env/rewards.py，这里是它的系数（缺项按默认值）。势函数 Φ = -(掌心误差 + height_weight·箱高误差 + tilt_cost·箱体倾角) 只依赖状态、不随抓取标志切换；grasp_bonus 每回合只发一次（否则策略会原地开合手刷分）；grasp_close/release_grip 是锁存/脱手的抓取通道阈值。"
+  }
+}

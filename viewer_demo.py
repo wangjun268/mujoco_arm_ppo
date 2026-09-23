@@ -7,8 +7,8 @@ immediately.
 
 Run::
 
-    python3 viewer_demo.py --env three_joint
-    python3 viewer_demo.py --env pro7_joint --episodes 5
+    python3 viewer_demo.py --env pro7_urdf
+    python3 viewer_demo.py --env pro7_urdf --episodes 5
 
 Notes
 -----
@@ -32,11 +32,12 @@ os.environ.setdefault("GALLIUM_DRIVER", "llvmpipe")
 from cli import add_env_arg, add_model_arg, apply_defaults, load_policy  # noqa: E402
 from env import make_env as build_env  # noqa: E402
 from live_viewer import KEY_T, LiveViewer  # noqa: E402
+from paths import DEFAULT_ENV  # noqa: E402
 
 
 def run_live_viewer(
     model_path: str,
-    env_name: str = "two_joint",
+    env_name: str = DEFAULT_ENV,
     seed: int = 0,
     fps: float = 50.0,
     n_episodes: int | None = None,
@@ -57,7 +58,7 @@ def run_live_viewer(
 
     obs, _ = env.reset(seed=seed)
     viewer = LiveViewer(env.model, env.data, key_callback=key_callback, fps=fps)
-    viewer.set_camera("cam_xy", "cam_iso")  # the model's dedicated camera
+    viewer.set_camera(getattr(env, "CAMERA", None) or "cam_iso", "cam_iso")
 
     episodes = 0
     next_frame = time.time()

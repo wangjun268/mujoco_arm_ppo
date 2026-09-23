@@ -93,7 +93,7 @@ def attach_live_viewer(venv, env_index: int = 0, fps: float = 60.0) -> LiveViewe
     base_env = venv.envs[env_index].unwrapped
     viewer = LiveViewer(base_env.model, base_env.data, fps=fps)
     candidates = [
-        name for name in (getattr(base_env, "CAMERA", None), "cam_iso", "cam_xy")
+        name for name in (getattr(base_env, "CAMERA", None), "cam_iso")
         if name
     ]
     viewer.set_camera(*candidates)

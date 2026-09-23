@@ -1,0 +1,10 @@
+# runtime (env/, train_ppo.py, eval_rollout.py, viewer_demo.py)
+mujoco>=3.1,<4
+gymnasium>=0.29,<2
+stable-baselines3>=2.3,<3
+torch>=2.0
+imageio>=2.31
+# numpy 2 is not supported by the pinned stable-baselines3 / torch builds here
+numpy>=1.24,<2
+# dev (tests/)
+pytest>=7.0
